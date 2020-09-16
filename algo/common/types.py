@@ -24,6 +24,5 @@ def create_assignment(assign_type=None, dump_structure=None, args=None):
     else:
         raise DumpStructureMissingException("Dump structure is missing")
     if args is not None:
-        assignment.set_weight(int(args.weight_ev) * pow(10, int(args.order_ev)),
-                              int(args.weight_gv) * pow(10, int(args.order_gv)))
+        assignment.set_weight(args.weight_ev, args.weight_gv)
     return assignment

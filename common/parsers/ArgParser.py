@@ -7,13 +7,11 @@ class ParameterConfigArgParser(ArgumentParser):
             This sets default parameters for running all algorithms,
             we can change this by changing the values at here or
             in run time by providing arguments
-            eg : execute/sim_anneal.py -start_prob="0.9"
+            eg: python3 execute/sim_anneal.py -start_prob="0.9"
         """
         ArgumentParser.__init__(self)
-        self.add_argument("-weight_ev", help="Weight of waiting time for ev", default=3, required=False)
-        self.add_argument("-weight_gv", help="Weight of waiting time gv", default=9, required=False)
-        self.add_argument("-order_ev", help="Order of weight for ev", default=-3, required=False)
-        self.add_argument("-order_gv", help="Order of weight for gv", default=-2, required=False)
+        self.add_argument("-weight_ev", help="Weight of waiting time for ev", default=0.003, required=False)
+        self.add_argument("-weight_gv", help="Weight of waiting time gv", default=0.09, required=False)
         self.add_argument("-cycle_count", help="Number of Cycle", default=50000, required=False)
         self.add_argument("-start_prob", help="Starting Prob", default=0.5, required=False)
         self.add_argument("-end_prob", help="Starting Prob", default=0.01, required=False)
