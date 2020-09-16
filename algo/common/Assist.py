@@ -241,11 +241,11 @@ class FUAssist(RunAssistWTC):
         for line in lines[1:]:
             serial, trip_id, vehicle_id, other = line.split(",", 3)
             others = other.split(",")
-            start_time_stamp = others[-6]
-            end_time_stamp = others[-5]
-            start_time = others[-4].split(" ")[1] + ":00"
-            end_time = others[-3].split(" ")[1] + ":00"
-            route = others[-2]
+            start_time_stamp = others[-5]
+            end_time_stamp = others[-4]
+            start_time = others[-3].split(" ")[1] + ":00"
+            end_time = others[-2].split(" ")[1] + ":00"
+            route = others[-1]
             current_trip = None
             current_vehicle = None
             start_time_stamp = int(float(start_time_stamp))
