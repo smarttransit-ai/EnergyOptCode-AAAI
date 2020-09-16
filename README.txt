@@ -62,8 +62,8 @@ python3 execute/int_prog.py
 
 In both modes, we can also add additional parameters to override the default argument values.
 For greedy algorithm and simulated annealing algorithm:
-- weight_ev = wait-time factor for electric buses
-- weight_gv = wait-time factor for liquid-fuel buses
+-weight_ev = wait-time factor for electric buses
+-weight_gv = wait-time factor for liquid-fuel buses
 
 Example:
 python3 execute/greedy.py -weight_ev="0.003" -weight_gv="0.09"
