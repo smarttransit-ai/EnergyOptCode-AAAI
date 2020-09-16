@@ -2,10 +2,10 @@ import os
 import sys
 from datetime import datetime, timedelta
 
-from algo.common.Assist import FUAssist
 
 sys.path.append(os.getcwd())
 
+from algo.common.Assist import FUAssist
 from common.util.common_util import run_function_generic
 from algo.greedy.GreedyAssist import create_greedy_assist
 from base.dump.with_charge.DumpConfig import DumpConfigWTC
