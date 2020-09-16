@@ -8,6 +8,13 @@ venv
 venv/*
 venv/**/*
 
+reload.py
+
+data/**/MTrips_gas_predict.csv
+data/**/MTrips_electric_predict.csv
+data/**/Trips_gas_predict.csv
+data/**/Trips_electric_predict.csv
+
 *.pyc
 
 .idea
