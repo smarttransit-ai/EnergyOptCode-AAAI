@@ -342,6 +342,6 @@ class ForcedUpdateBase:
                 print("Failed assignments {}".format(str(failed_count)))
                 df = DataFrame()
                 df["trip_id"] = trip_ids
-                df.to_csv(self.result_dir + "successful.csv")
+                df.to_csv(self.result_dir + "successful.csv", index=False)
         else:
             raise NotImplementedError

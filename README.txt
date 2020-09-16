@@ -13,11 +13,8 @@ data/DATA_2019/1
     - gtfs_mini_dump.dat - contains a list of all operating trips, with energy estimates
     - move_trips_mini_dump.dat - contains energy estimates, distance and duration of all moving trips
 data/DATA_2019/input/dump
-    - these are just made into a dump, for quick access purpose while running algorithms.
-    - shapes.dat - contains list of shape objects corresponding to the shapes.txt
+    - this is just made into a dump, for quick access purpose while running algorithms.
     - stops.dat - contains list of stop objects corresponding to the stops.txt
-    - stop_times.dat - contains list of stop_times objects corresponding to the stop_times.txt
-    - trips.dat - contains list of trips objects corresponding to the trips.txt
 real/trips/
     *.csv - these contains different real-word assignments
     and each csv file_contains following details
