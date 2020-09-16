@@ -21,7 +21,7 @@ data/DATA_2019/input/dump
 real/trips/
     *.csv - these contains different real-word assignments
     and each csv file_contains following details
-    tatripid,vid,start_pdist,end_pdist,num_docs,start_timestamp,end_timestamp,start_tmstmp,end_tmstmp,route_id
+    entry_no,trip_id,vehicle_id,start_pdist,end_pdist,num_docs,start_timestamp,end_timestamp,start_tmstmp,end_tmstmp,route_id
 
 SAMPLE CODES:
 There is two modes applications
