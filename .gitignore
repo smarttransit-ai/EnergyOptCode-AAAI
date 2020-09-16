@@ -10,6 +10,8 @@ venv/**/*
 
 reload.py
 
+data/**/json_dump.dat
+
 data/**/MTrips_gas_predict.csv
 data/**/MTrips_electric_predict.csv
 data/**/Trips_gas_predict.csv
