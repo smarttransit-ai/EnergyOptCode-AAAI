@@ -60,7 +60,10 @@ class SimulatedAnnealing:
             if cost_new > self.energy_cost:
                 if i == 0:
                     delta_e_avg = delta_e
-                p = math.exp(-delta_e / (delta_e_avg * selected_temp))
+                if (delta_e_avg * selected_temp) == 0:
+                    p = math.exp(-math.inf)
+                else:
+                    p = math.exp(-delta_e / (delta_e_avg * selected_temp))
                 accept = True if p > random.random() else False
             else:
                 accept = True

@@ -9,14 +9,25 @@ from datetime import datetime
 from base.dump.DumpIPGenAssist import DumpIPGenAssist
 from base.dump.DumpStructure import DumpStructure, DumpStructureIP
 from base.entity.Bus import create_buses
-from base.util.trips_util import extract_trips_minimal, trip_count_csv_file
 from common.Time import diff, time
 from common.configs.global_constants import macosx_directory, dump_directory, \
-    dump_log_directory, dump_info_directory, default_time_tol
+    dump_log_directory, dump_info_directory, default_time_tol, data_week_directory
 from common.util import pickle_util as custom_pickle
 from common.util.common_util import create_dir, delete_dir, s_print_err
 from common.writer.FileAppender import FileAppender
 from common.writer.FileWriter import FileWriter
+
+gtfs_mini_dump_file = data_week_directory + "gtfs_mini_dump.dat"
+trip_count_csv_file = data_week_directory + "trip_counts.csv"
+
+
+def extract_trips_minimal():
+    """
+    Returns:
+        returns minimal version of operating trips,
+        this will reduce the memory usage in dump generation especially in IP
+    """
+    return custom_pickle.load_obj(gtfs_mini_dump_file)
 
 
 def read_bus_line_trip_info(dump_config, file_name):
