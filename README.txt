@@ -1,5 +1,5 @@
 DIRECTORIES:
-algo: Python source code for greedy approach, simulated annealing, and integer programming
+algo: Python source code for greedy approach, simulated annealing, genetic algorithm, and integer programming
 base: source code for entities, models, and utilities that are used to implement the algorithms
 common: constants and common utilities shared by source files in other folders (algo, base)
 execute: sample Python source codes for executing our algorithms and experiments
@@ -45,6 +45,10 @@ python3 execute/sim_anneal.py
 
 python3 execute/compare.py
 
+4. run genetic algorithm algorithm
+
+python3 execute/gen_algo.py
+
 In SAMPLE MODE (make sure that config.ini "run_mode" value of "MODE" block is set to "SAMPLE")
 
 1. run greedy algorithm
@@ -59,6 +63,9 @@ python3 execute/sim_anneal.py
 
 python3 execute/int_prog.py
 
+4. run genetic algorithm algorithm
+
+python3 execute/gen_algo.py
 
 In both modes, we can also add additional parameters to override the default argument values.
 For greedy algorithm and simulated annealing algorithm:
