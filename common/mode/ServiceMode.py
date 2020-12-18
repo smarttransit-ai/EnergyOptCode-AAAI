@@ -5,6 +5,8 @@ from common.mode.AgencyMode import AgencyMode
 
 class ServiceMode2019(Enum):
     WEEKDAY = '1'
+    SATURDAY = '2'
+    SUNDAY = '3'
 
 
 def get_service_mode(day_code_str, agency_code_str):
@@ -12,6 +14,12 @@ def get_service_mode(day_code_str, agency_code_str):
     if day_code_str == "WEEKDAY":
         if agency_code_str == "DATA_2019":
             day_code_val = ServiceMode2019.WEEKDAY
+    elif day_code_str == "SATURDAY":
+        if agency_code_str == "DATA_2019":
+            day_code_val = ServiceMode2019.SATURDAY
+    elif day_code_str == "SUNDAY":
+        if agency_code_str == "DATA_2019":
+            day_code_val = ServiceMode2019.SUNDAY
     return day_code_val
 
 
@@ -19,9 +27,9 @@ default_agency_mode = AgencyMode.DATA_2019
 default_service_id = ServiceMode2019.WEEKDAY
 
 time_stamps = {}
-selected_timestamp = 1597636800
+aug_17_2020_time_stamp = 1597636800
 
-time_stamps[ServiceMode2019.WEEKDAY] = selected_timestamp
+time_stamps[ServiceMode2019.WEEKDAY] = aug_17_2020_time_stamp
 
 range_values = {
     (AgencyMode.DATA_2019, ServiceMode2019.WEEKDAY): [0, 18],

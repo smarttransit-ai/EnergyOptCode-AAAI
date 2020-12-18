@@ -5,17 +5,16 @@ from base.entity.MovingTrip import create_mov_trip
 from base.entity.OperatingTrip import OperatingTrip
 from base.model.AssignAssist import AssignAssist
 from base.model.AssignBase import AssignBase
-from base.model.SAAction import SAAction
 from common.Time import diff
 from common.configs.model_constants import electric_bus_type, gas_bus_type
 
+RouteTrip = namedtuple("RouteTrip", ["trip", "serve_or_move", "bus"])
 Weight = namedtuple("Weight", ["weight_ev", "weight_gv"])
 
 
-class Assignment(AssignBase, SAAction):
+class Assignment(AssignBase):
     def __init__(self, assignment_type):
         AssignBase.__init__(self)
-        SAAction.__init__(self)
         self._assignment_type = assignment_type
         self._d_buses = []
         self._trip_alloc = []
@@ -24,10 +23,12 @@ class Assignment(AssignBase, SAAction):
         self.complete = False
 
     def base_copy(self):
-        return Assignment(self._assignment_type)
+        base_assign_cpy = Assignment(self._assignment_type)
+        base_assign_cpy._weight = self._weight
+        return base_assign_cpy
 
     def copy(self):
-        assign_cpy = Assignment(self._assignment_type)
+        assign_cpy = self.base_copy()
         assign_cpy._assignments = {}
         assign_cpy._assignments.update(self._assignments.copy())
         for key in self._allocations_dict.keys():
@@ -69,10 +70,13 @@ class Assignment(AssignBase, SAAction):
             status = _info.feasible()
             if status:
                 self._trip_alloc.append(selected_trip)
-                if is_dummy(selected_bus):
-                    if selected_bus not in self._d_buses:
-                        self._d_buses.append(selected_bus)
+                self._update_stats(selected_bus)
         return status
+
+    def _update_stats(self, selected_bus):
+        if is_dummy(selected_bus):
+            if selected_bus not in self._d_buses:
+                self._d_buses.append(selected_bus)
 
     def remove(self, selected_trip):
         remove_status = False
@@ -91,6 +95,31 @@ class Assignment(AssignBase, SAAction):
     def bus_movements(self, selected_bus):
         return super(Assignment, self)._movements(selected_bus)
 
+    def order_bus_by_ms_ratio(self):
+        """
+        Returns:
+            order the buses by moving/service cost ratio
+        """
+        buses = self.get_buses()
+        trip_move_cost_ratio = {}
+        for bus in buses:
+            movements = self.bus_movements(bus)
+            ser_cost = 0
+            mov_cost = 0
+            for movement in movements:
+                mov_cost += movement.get_energy_cost(bus.bus_type)
+            for sel_trip in self.list_bus_allocations(bus):
+                ser_cost += sel_trip.get_energy_cost(bus.bus_type)
+            ratio = mov_cost / ser_cost
+            if ratio in trip_move_cost_ratio:
+                trip_move_cost_ratio[ratio].append(bus)
+            else:
+                trip_move_cost_ratio[ratio] = [bus]
+        sorted_buses = []
+        for cost in sorted(trip_move_cost_ratio.keys()):
+            sorted_buses.extend(trip_move_cost_ratio[cost])
+        return sorted_buses
+
     def compute_all_movements(self, buses):
         all_movements = []
         for _bus in buses:
@@ -108,6 +137,24 @@ class Assignment(AssignBase, SAAction):
             for movement in movement_dict.keys():
                 sel_bus = movement_dict[movement]
                 summation += movement.get_energy_cost(sel_bus.bus_type)
+        return round(summation, 5)
+
+    def total_energy_by_bus(self, sel_bus):
+        if sel_bus not in self.get_buses():
+            return 0
+        return super(Assignment, self)._total_energy_by_bus(sel_bus)
+
+    def total_emission(self):
+        all_movements = self.compute_all_movements(self.get_buses())
+        summation = 0
+        for sel_trip in self.get_trips():
+            sel_bus = self.get(sel_trip)
+            if isinstance(sel_trip, OperatingTrip):
+                summation += sel_trip.get_emission(sel_bus.bus_type)
+        for movement_dict in all_movements:
+            for movement in movement_dict.keys():
+                sel_bus = movement_dict[movement]
+                summation += movement.get_emission(sel_bus.bus_type)
         return round(summation, 5)
 
     def electric_bus_count(self):
@@ -134,21 +181,12 @@ class Assignment(AssignBase, SAAction):
     def get_trips(self):
         return super(Assignment, self)._keys()
 
-    def biased_energy_cost(self, selected_trip, selected_bus):
-        """
-        This corresponds to Algorithm 01
-        Args:
-            self: set of Assignments
-            selected_trip: specific trip
-            selected_bus: selected bus to assign to the trip
-        Returns:
-            biased energy cost for assigning a selected trip to a selected bus
-        """
+    def energy_cost(self, selected_trip, selected_bus):
         additional = selected_trip.get_energy_cost(selected_bus.bus_type)
         bus_allocations = self.list_bus_allocations(selected_bus)
         bus_allocations_cpy = bus_allocations.copy()
         bus_allocations_cpy.append(selected_trip)
-        bus_allocations_cpy = sorted(bus_allocations_cpy, key=lambda _trip: _trip.start_time.time_in_seconds)
+        bus_allocations_cpy = sorted(bus_allocations_cpy, key=lambda _trip: _trip.start_s())
         index = bus_allocations_cpy.index(selected_trip)
         weight = 0
         if selected_bus.bus_type.type_name == electric_bus_type.type_name:
@@ -159,12 +197,12 @@ class Assignment(AssignBase, SAAction):
         wait_time_next = 0
         if index > 0:
             prev_assign = bus_allocations_cpy[index - 1]
-            mov_trip_1 = create_mov_trip(prev_assign, selected_trip)
-            additional += mov_trip_1.get_energy_cost(selected_bus.bus_type)
+            mov_trip_prev = create_mov_trip(prev_assign, selected_trip)
+            additional += mov_trip_prev.get_energy_cost(selected_bus.bus_type)
             wait_time_prev = diff(selected_trip.start_time, prev_assign.end_time).time_in_seconds
         if index < len(bus_allocations_cpy) - 1:
             next_assign = bus_allocations_cpy[index + 1]
-            mov_trip_2 = create_mov_trip(selected_trip, next_assign)
-            additional += mov_trip_2.get_energy_cost(selected_bus.bus_type)
+            mov_trip_next = create_mov_trip(selected_trip, next_assign)
+            additional += mov_trip_next.get_energy_cost(selected_bus.bus_type)
             wait_time_next = diff(next_assign.start_time, selected_trip.end_time).time_in_seconds
-        return additional + (wait_time_prev + wait_time_next) * weight
+        return additional + wait_time_prev * weight + wait_time_next * weight

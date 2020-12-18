@@ -1,61 +1,38 @@
-from datetime import datetime
-
 from algo.common.Assist import RunAssist, RunAssistWTC
-from algo.int_prog.CustomCPLEX import CustomCPLEXWTC
+from algo.int_prog.CustomCPLEX import create_custom_cplex, custom_cplex_class
 from algo.int_prog.CustomCPLEXBase import dump_util
-from common.configs.global_constants import output_directory
+from common.configs.global_constants import output_directory, with_charging
 from common.util.common_util import run_function_generic
-from common.util.common_util import s_print
 
 
 class IPAssist(RunAssist):
     def __init__(self, _dump_util, _output_dir):
-        RunAssist.__init__(self, "$ip_cost, $ip_duration, $ip_status", _dump_util, _output_dir)
+        RunAssist.__init__(self, "ip_cost,ip_emission,ip_duration,ip_status_and_gap", _dump_util, _output_dir)
 
     def _assist_pre(self, prefix):
         self.__dump_util = dump_util
-        self._path = self._output_dir + '$ip_summary.csv'
-        self._path = self._path.replace("$ip", prefix)
+        self._path = self._output_dir + self._suffix + 'ip_summary.csv'
         self._open_writer()
-        self._heading = self._heading.replace("$ip", prefix)
         self._write_header()
         self._prefix = prefix
 
     def _assist_inner(self, args=None):
         _prefix = self._dump_config.__key__() + "_" + self._prefix.upper()
-        prefix = _prefix + "/"
-        is_integer = None
-        if self._prefix == "ip":
-            is_integer = True
-        elif self._prefix == "lp":
-            is_integer = False
         self.print()
-        start_time = datetime.now()
-        my_prob = CustomCPLEXWTC(dump_config=self._dump_config)
-        my_prob.populate_by_row(is_integer)
-        my_prob.solve()
-        end_time = datetime.now()
-        objective, status = my_prob.write_summary(prefix)
+        my_prob = create_custom_cplex(custom_cplex_class, self._dump_config)
+        my_prob.solve_prob()
+        objective, status, gap = my_prob.write_summary()
         self._assignment = my_prob.assignment
-        duration = (end_time - start_time).total_seconds()
-        self._cur_summary_suffix = [objective, duration, status]
+        self._cur_summary_suffix = ["{} - {} %".format(str(status), str(gap))]
 
     def get_status(self):
-        _, _, status = self._cur_summary_suffix
-        return status
+        return self._cur_summary_suffix[0]
 
     def run(self, prefix, args=None):
         RunAssist.run(self, prefix, args)
 
-    def _print_common(self):
-        if self._prefix == "ip":
-            s_print("Evaluating Integer Programming")
-        elif self._prefix == "lp":
-            s_print("Evaluating Linear Programming")
-
-    def print(self):
-        self._print_common()
-        RunAssist.print(self)
+    def run_multi(self, prefix, args=None):
+        RunAssist.run_multi(self, prefix, args)
 
 
 class IPAssistWTC(IPAssist, RunAssistWTC):
@@ -68,9 +45,8 @@ class IPAssistWTC(IPAssist, RunAssistWTC):
     def run(self, prefix, args=None):
         RunAssistWTC.run(self, prefix, args)
 
-    def print(self):
-        self._print_common()
-        RunAssistWTC.print(self)
+    def run_multi(self, prefix, args=None):
+        RunAssistWTC.run_multi(self, prefix, args)
 
 
 def generic_program(func, args):
@@ -82,5 +58,17 @@ class InvalidIPAssistClassException(Exception):
         super(InvalidIPAssistClassException, self).__init__(args)
 
 
+if with_charging:
+    ip_assist_class = IPAssistWTC
+else:
+    ip_assist_class = IPAssist
+
+
 def create_ip_assist():
-    return IPAssistWTC(dump_util, output_directory)
+    if issubclass(ip_assist_class, IPAssistWTC):
+        ip_assist = IPAssistWTC(dump_util, output_directory)
+    elif issubclass(ip_assist_class, IPAssist):
+        ip_assist = IPAssist(dump_util, output_directory)
+    else:
+        raise InvalidIPAssistClassException("Invalid IPAssist Class {}".format(ip_assist_class.__name__))
+    return ip_assist

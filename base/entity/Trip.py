@@ -3,17 +3,20 @@ import math
 from base.entity.Charging import is_trip_in_slot
 from base.entity.EnergyConsumed import energy_consumed
 from base.entity.Route import Route
+from base.entity.TripDurationBase import TripDurationBase
 from common.Time import add
+# trip is  a entry combining a route and particular start time of route
+# this can be operation or moving
 from common.configs.model_constants import electric_bus_type, gas_bus_type
 
 
-class Trip(object):
+class Trip(TripDurationBase):
     def __init__(self, start_pos, end_pos):
+        super(Trip, self).__init__(None, None)
         self.route = Route(start_pos, end_pos)
         self.energy_consumed = math.inf
         self.energy_cost = math.inf
-        self.start_time = None
-        self.end_time = None
+        self.emission = math.inf
         self.trip_id = ""
 
     def add_locations(self, locations):
@@ -55,6 +58,10 @@ class Trip(object):
     def get_energy_cost(self, bus_type):
         self.energy_cost = energy_consumed(self.route, bus_type).cost
         return self.energy_cost
+
+    def get_emission(self, bus_type):
+        self.emission = energy_consumed(self.route, bus_type).co2_emission
+        return self.emission
 
     def start_in_slot(self, slot):
         return is_trip_in_slot(slot, self)

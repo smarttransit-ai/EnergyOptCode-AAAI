@@ -1,6 +1,3 @@
-# -------------------------------------------------------------------------------- #
-#                        CONFIGURATION OF RANDOM DUMP DATA                         #
-# -------------------------------------------------------------------------------- #
 class DumpConfigBase(object):
     def __init__(self, route_limit, trip_limit):
         self.route_limit = route_limit

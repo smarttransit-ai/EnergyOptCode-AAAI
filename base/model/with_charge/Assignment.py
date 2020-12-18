@@ -2,12 +2,13 @@ import math
 
 import numpy as np
 
-from base.entity.Bus import is_electric, is_dummy
+from base.entity.Bus import is_electric
 from base.entity.MovingTrip import is_in_between
+from base.entity.OperatingTrip import OperatingTrip
 from base.model.AssignBase import AssignBase, FeasibilityStatusInfo
 from base.model.Assignment import Assignment
+from base.model.CostMatrix import UpdateCostMatrix
 from base.model.with_charge.AssignAssist import AssignAssistWTC
-from base.util.cost_util import init_cost_matrix
 from common.configs.model_constants import electric_bus_type
 from common.util.common_util import s_print
 
@@ -34,9 +35,7 @@ class AssignmentWTC(Assignment):
             _info = self.add(selected_trip, selected_bus)
             if _info.feasible():
                 self._trip_alloc.append(selected_trip)
-                if is_dummy(selected_bus):
-                    if selected_bus not in self._d_buses:
-                        self._d_buses.append(selected_bus)
+                self._update_stats(selected_bus)
                 status = True
             else:
                 if is_electric(selected_bus):
@@ -49,10 +48,14 @@ class AssignmentWTC(Assignment):
                                 self._charging_alloc.append(_res_info.entity())
                                 status = True
                     else:
-                        if electric_bus_type.capacity < selected_trip.get_energy_consumed(electric_bus_type):
+                        if isinstance(selected_trip, OperatingTrip):
+                            if electric_bus_type.capacity < selected_trip.get_energy_consumed(electric_bus_type):
+                                s_print(_info.energy())
+                                raise NotEnoughEVEnergyException("EVBusEnergy is not enough for a single trip !!!")
+                        else:
                             s_print(_info.energy())
                             raise NotEnoughEVEnergyException("EVBusEnergy is not enough for a single trip !!!")
-        return status
+            return status
 
     def assign_charge_force(self, selected_charge, selected_bus):
         _info = FeasibilityStatusInfo()
@@ -65,16 +68,19 @@ class AssignmentWTC(Assignment):
 
     def assign_charge(self, _info, selected_bus, selected_trip):
         _sel_charging = None
-        prev_trip = _info.entity()
+        _adjust_entity = _info.entity()
         possible_charging = []
         for _charging in self._charging_slots:
-            c0 = is_in_between(prev_trip, _charging, selected_trip)
+            if _adjust_entity.start_s() < selected_trip.start_s():
+                c0 = is_in_between(_adjust_entity, _charging, selected_trip)
+            else:
+                c0 = is_in_between(selected_trip, _charging, _adjust_entity)
             c1 = _charging not in self._charging_alloc
             if c0 and c1:
                 possible_charging.append(_charging)
         if len(possible_charging) > 0:
-            cost_matrix = init_cost_matrix(self, possible_charging, [selected_bus])
-            x = np.array(cost_matrix)
+            cost_matrix = UpdateCostMatrix(self, possible_charging, [selected_bus])
+            x = np.array(cost_matrix.matrix)
             x_min = np.min(x)
             if x_min != math.inf:
                 charge_bus_pairs = np.argwhere(x == np.min(x))
@@ -82,7 +88,7 @@ class AssignmentWTC(Assignment):
                 _sel_charging = possible_charging[_sel_charging_i]
                 _charge_info = self.assign_charge_force(_sel_charging, selected_bus)
                 if _charge_info.feasible():
-                    _info.set_entity(_sel_charging)
+                    _info = FeasibilityStatusInfo(True, True, _sel_charging, 0)
         return _info
 
     def remove(self, selected_trip):
@@ -100,10 +106,12 @@ class AssignmentWTC(Assignment):
         return remove_status
 
     def base_copy(self):
-        return AssignmentWTC(self._assignment_type, self._charging_slots.copy())
+        base_assign_cpy = AssignmentWTC(self._assignment_type, self._charging_slots.copy())
+        base_assign_cpy._weight = self._weight
+        return base_assign_cpy
 
     def copy(self):
-        assign_cpy = AssignmentWTC(self._assignment_type, self._charging_slots.copy())
+        assign_cpy = self.base_copy()
         assign_cpy._assignments = {}
         assign_cpy._assignments.update(self._assignments.copy())
         for key in self._allocations_dict.keys():

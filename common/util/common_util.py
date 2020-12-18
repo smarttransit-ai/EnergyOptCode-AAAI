@@ -7,6 +7,39 @@ import sys
 from enum import Enum
 
 
+def avg(items):
+    return sum(items) / len(items)
+
+
+def extract(main_dir, file_ending=""):
+    _files = []
+    for root, dirs, files in os.walk(main_dir):
+        for file in files:
+            if file.endswith(file_ending):
+                __file_path = os.path.join(root, file)
+                _files.append(__file_path)
+    return _files
+
+
+def ignore_and_extract(main_dir, file_ending="", ignore_filters=None):
+    _files = []
+    for root, dirs, files in os.walk(main_dir):
+        for file in files:
+            if file.endswith(file_ending):
+                __file_path = os.path.join(root, file)
+                filter_exists = False
+                if ignore_filters is not None:
+                    for _filter in ignore_filters:
+                        if _filter in __file_path:
+                            filter_exists = True
+                            break
+                else:
+                    filter_exists = True
+                if not filter_exists:
+                    _files.append(__file_path)
+    return _files
+
+
 def create_dir(dir_name):
     if "." in dir_name:
         last_slash = dir_name.rfind("/")
@@ -29,7 +62,7 @@ def delete_dir(dir_name):
 
 class PrintTypes(Enum):
     INFO = 'white'
-    WARNING = 'yellow'
+    WARN = 'yellow'
     ERROR = 'red'
 
 
@@ -49,6 +82,11 @@ def s_print_err(content, end=True):
     s_print(content, print_type=PrintTypes.ERROR, end=end)
 
 
+def convert_loc_string_to_lat_lon(loc_string, deliminator="|"):
+    lat, lon = loc_string.split(deliminator)
+    return float(lat), float(lon)
+
+
 def run_function_generic(dump_util, func, args=None):
     try:
         if args is not None:
@@ -57,9 +95,3 @@ def run_function_generic(dump_util, func, args=None):
             func()
     except KeyboardInterrupt:
         dump_util.clean_dump()
-
-
-def grid_search(func):
-    for i in range(1, 11, 1):
-        for j in range(1, 11, 1):
-            func(i, j)

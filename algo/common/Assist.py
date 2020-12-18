@@ -2,17 +2,15 @@ import math
 import os
 from datetime import datetime
 
-from pandas import DataFrame
-
-from algo.common.constants import convert_month_day_num_to_str
-from algo.common.types import AssignTypes, create_assignment
+from algo.common.FUBase import ForcedUpdate
 from base.dump.DumpConfig import DumpConfig
 from base.dump.with_charge.DumpConfig import DumpConfigWTC
 from base.entity.Bus import bus
-from base.entity.Charging import Charging
-from base.entity.OperatingTrip import OperatingTrip
-from common.configs.global_constants import run_mode, max_ev_count, max_gv_count, dummy_cost
+from common.configs.global_constants import run_mode, max_ev_count, max_gv_count, dummy_cost, \
+    data_main_directory, trips_directory
+from common.configs.global_constants import selected_date
 from common.configs.model_constants import electric_bus_type, gas_bus_type
+from common.constants import convert_month_day_num_to_str
 from common.mode.RunMode import get_r_t_values, get_r_t_h_values, RunMode
 from common.parsers.ArgParser import CustomArgParser
 from common.parsers.ArgParser import CustomWTCArgParser
@@ -22,21 +20,42 @@ from common.writer.FileWriter import FileWriter
 
 
 class RunAssist(object):
-    def __init__(self, heading, dump_util, output_dir):
+    def __init__(self, heading, dump_util, output_dir, skip_ind_summary=False):
         self._heading = heading
         self._dump_util = dump_util
         self._output_dir = output_dir
+        self._skip_ind_summary = skip_ind_summary
+        self._selected_date = None
         self._dump_config = None
         self._dump_structure = None
         self._filtered_trips = None
         self._filtered_trip_ids = None
         self._assignment = None
-        self._ev_weight = None
-        self._gv_weight = None
+        self._params = None
         self._cur_summary_suffix = None
         self._path = ""
         self._prefix = ""
+        self._suffix = ""
         self.__summary = None
+
+    def add_params(self, params):
+        if self._params is None:
+            self._params = {}
+        self._params.update(params.copy())
+
+    def set_date(self, u_selected_date):
+        self._selected_date = u_selected_date
+
+    def set_summary_suffix(self, filename):
+        self._suffix = "_" + filename
+
+    def get(self, factor):
+        if factor == "cost":
+            return self.get_cost()
+        elif factor == "emission":
+            return self.get_emission()
+        else:
+            raise ValueError("Invalid factor {}".format(str(factor)))
 
     def get_cost(self):
         if self._assignment is not None:
@@ -44,10 +63,26 @@ class RunAssist(object):
         else:
             raise TypeError("No assignment object found")
 
-    def get_status(self):
-        return math.floor(self.get_cost() / dummy_cost)
+    def get_emission(self):
+        if self._assignment is not None:
+            return self._assignment.total_emission()
+        else:
+            raise TypeError("No assignment object found")
 
-    def inject_real_data_trips(self, real_world_date=datetime(2020, 3, 2)):
+    def get_status(self):
+        status = "Infeasible"
+        if math.floor(self.get_cost() / dummy_cost) == 0:
+            status = "Feasible"
+        return status
+
+    def inject_trips(self, trips):
+        """
+        Args:
+            trips: update custom filtered trips based on specific trips
+        """
+        self._filtered_trips = trips.copy()
+
+    def inject_real_data_trips(self, real_world_date=selected_date):
         """
         Args:
             real_world_date: date from which the real world data need to be
@@ -58,7 +93,7 @@ class RunAssist(object):
             day = real_world_date.day
             month = real_world_date.month
             month_val, day_val = convert_month_day_num_to_str(str(month) + "/" + str(day))
-            file_name = "real/trips/" + month_val + "/" + day_val + "/successful.csv"
+            file_name = trips_directory + month_val + "/" + day_val + "/successful.csv"
             if not os.path.exists(file_name):
                 fu_assist = FUAssist(self._dump_util, self._output_dir)
                 fu_assist.set_date(real_world_date)
@@ -84,10 +119,6 @@ class RunAssist(object):
     def update_output_dir(self, _u_output_dir):
         self._output_dir = _u_output_dir
 
-    def set_weight(self, ev_weight, gv_weight):
-        self._ev_weight = ev_weight
-        self._gv_weight = gv_weight
-
     def get_assignment(self):
         return self._assignment
 
@@ -99,10 +130,11 @@ class RunAssist(object):
         self.__summary.write_header(self._heading, allow_prefix=True)
 
     def _write(self, content):
-        if self._assignment is not None:
-            self._assignment.update_output_dir(self._output_dir)
-            self._assignment.write(self._dump_structure.__key__() + "_" + self._prefix)
-            self._assignment.write_bus_stat(self._dump_structure.__key__(), self._prefix, do_print=False)
+        if not self._skip_ind_summary:
+            if self._assignment is not None:
+                self._assignment.update_output_dir(self._output_dir)
+                self._assignment.write(self._dump_structure.__key__() + "_" + self._prefix)
+                self._assignment.write_bus_stat(self._dump_structure.__key__(), self._prefix, do_print=True)
         self.__summary.write(content)
 
     def _close(self):
@@ -122,13 +154,32 @@ class RunAssist(object):
         self._assist_inner(parse_args)
         end_time = datetime.now()
         exec_time = (end_time - start_time).total_seconds()
-        if self._assignment is not None:
-            self._cur_summary_suffix = [self.get_cost(), exec_time, self.get_status()]
+        self._cur_summary_suffix = [self.get_cost(), self.get_emission(), exec_time, self.get_status()]
 
     def run(self, prefix, args=None):
         self._prefix = prefix
         self._assist_pre(prefix)
-        for (r, t) in get_r_t_values(run_mode):
+        if args is not None and isinstance(args, CustomArgParser):
+            parsed_args = args.parse_args()
+        else:
+            arg_parser = CustomArgParser()
+            parsed_args = arg_parser.parse_args()
+        e = int(parsed_args.ev_count)
+        g = int(parsed_args.gv_count)
+        r = int(parsed_args.route_limit)
+        t = int(parsed_args.trip_limit)
+        self._dump_config = DumpConfig(e, g, r, t)
+        self._run_inner(parsed_args)
+        self._write([r, t, e, g] + self._cur_summary_suffix)
+        self._close()
+
+    def run_multi(self, prefix, args=None):
+        self._prefix = prefix
+        self._assist_pre(prefix)
+        r_t_values = get_r_t_values(run_mode)
+        if len(r_t_values) == 0:
+            raise ValueError("Empty samp instances !!!")
+        for (r, t) in r_t_values:
             e = max_ev_count
             g = min(max_gv_count, 5 * r - e)
             self._dump_config = DumpConfig(e, g, r, t)
@@ -138,10 +189,8 @@ class RunAssist(object):
                 parse_args.gv_count = g
                 parse_args.route_limit = r
                 parse_args.trip_limit = t
-                if self._ev_weight is not None:
-                    parse_args.weight_ev = self._ev_weight
-                if self._gv_weight is not None:
-                    parse_args.weight_gv = self._gv_weight
+                if self._params is not None:
+                    parse_args.__dict__.update(self._params.copy())
             else:
                 parse_args = args
             self._run_inner(parse_args)
@@ -162,7 +211,27 @@ class RunAssistWTC(RunAssist):
     def run(self, prefix, args=None):
         self._prefix = prefix
         self._assist_pre(prefix)
-        for (r, t, h) in get_r_t_h_values(run_mode):
+        if args is not None and isinstance(args, CustomWTCArgParser):
+            parsed_args = args.parse_args()
+        else:
+            arg_parser = CustomWTCArgParser()
+            parsed_args = arg_parser.parse_args()
+        e = int(parsed_args.ev_count)
+        g = int(parsed_args.gv_count)
+        r = int(parsed_args.route_limit)
+        t = int(parsed_args.trip_limit)
+        h = float(parsed_args.slot_duration)
+        self._run_inner(parsed_args)
+        self._write([r, t, e, g, h] + self._cur_summary_suffix)
+        self._close()
+
+    def run_multi(self, prefix, args=None):
+        self._prefix = prefix
+        self._assist_pre(prefix)
+        r_t_h_values = get_r_t_h_values(run_mode)
+        if len(r_t_h_values) == 0:
+            raise ValueError("Empty samp instances !!!")
+        for (r, t, h) in r_t_h_values:
             e = max_ev_count
             g = min(max_gv_count, 5 * r - e)
             self._dump_config = DumpConfigWTC(e, g, r, t, h)
@@ -173,10 +242,8 @@ class RunAssistWTC(RunAssist):
                 parse_args.route_limit = r
                 parse_args.trip_limit = t
                 parse_args.slot_duration = h
-                if self._ev_weight is not None:
-                    parse_args.weight_ev = self._ev_weight
-                if self._gv_weight is not None:
-                    parse_args.weight_gv = self._gv_weight
+                if self._params is not None:
+                    parse_args.__dict__.update(self._params.copy())
             else:
                 parse_args = args
             self._run_inner(parse_args)
@@ -196,10 +263,10 @@ class RunAssistWTC(RunAssist):
 
 class FUAssist(RunAssistWTC):
     def __init__(self, _dump_util, _output_dir):
-        RunAssistWTC.__init__(self, "fu_cost, fu_time, fu_status", _dump_util, _output_dir)
-        self._selected_date = None
+        RunAssistWTC.__init__(self, "fu_cost,fu_emission,fu_time,fu_status", _dump_util, _output_dir)
+        self._selected_date = selected_date
 
-    def set_date(self, u_selected_date):
+    def update_selected_date(self, u_selected_date):
         self._selected_date = u_selected_date
 
     def _open_writer(self):
@@ -215,7 +282,7 @@ class FUAssist(RunAssistWTC):
         day = self._selected_date.day
         month = self._selected_date.month
         month_val, day_val = convert_month_day_num_to_str(str(month) + "/" + str(day))
-        file_name = "real/trips/" + month_val + "/" + day_val + ".csv"
+        file_name = data_main_directory + "trips/" + month_val + "/" + day_val + ".csv"
         date_str = self._selected_date.strftime("%Y/%m/%d")
         print("Assigning trips to buses as of data for date {}".format(date_str))
         dump_structure = self._dump_util.load_filtered_data(dump_config)
@@ -299,49 +366,30 @@ class FUAssist(RunAssistWTC):
         for [selected_trip, selected_bus] in trip_vehicle_pairs:
             if selected_trip in trips_dicts.values() and selected_bus in buses_dicts.values():
                 trip_count += 1
-                time_in_sec = selected_trip.start_time.time_in_seconds
+                time_in_sec = selected_trip.start_s()
                 assigns = []
                 if time_in_sec in assign_pairs.keys():
                     assigns = assign_pairs[time_in_sec]
                 assigns.append((selected_trip, selected_bus))
                 assign_pairs[time_in_sec] = assigns.copy()
-
-        result_dir = file_name.replace(".csv", "/")
-        create_dir(result_dir)
-        fu_assign = ForcedUpdateBase(dump_structure=dump_structure)
-        fu_assign.result_dir = result_dir
-        _ = fu_assign.force_update(assign_pairs)
+        specific_trip_dir = trips_directory + month_val + "/" + day_val + "/"
+        create_dir(specific_trip_dir)
+        fu_assign = ForcedUpdate(dump_structure=dump_structure, result_dir=specific_trip_dir, date=date_str)
+        _ = fu_assign.force_update(assign_pairs, real_times=real_times)
         self._assignment = fu_assign.assignment
+
+    def _run_inner(self, parse_args):
+        self._dump_config = DumpConfigWTC(3, 50, 17, 230, 1)
+        self._dump_structure = self._dump_util.load_filtered_data(self._dump_config)
+        self._force_update_trips()
+        start_time = datetime.now()
+        self._assist_inner(parse_args)
+        end_time = datetime.now()
+        exec_time = (end_time - start_time).total_seconds()
+        self._cur_summary_suffix = [self.get_cost(), self.get_emission(), exec_time, self.get_status()]
 
     def run(self, prefix, args=None):
         RunAssistWTC.run(self, prefix, CustomArgParser())
 
-
-class ForcedUpdateBase:
-    def __init__(self, dump_structure):
-        self.assignment = create_assignment(AssignTypes.FORCE_UPDATE, dump_structure=dump_structure)
-        self.result_dir = ""
-
-    def force_update(self, _assignments_times=None, skip_success=False):
-        failed_count = 0
-        trip_ids = []
-        if self.assignment.get_type() == AssignTypes.FORCE_UPDATE:
-            self.assignment.reset()
-            for _assign_pair_key in sorted(_assignments_times.keys()):
-                for (_trip, _bus) in _assignments_times[_assign_pair_key]:
-                    _info = self.assignment.add(_trip, _bus)
-                    if _info.feasible():
-                        if isinstance(_trip, OperatingTrip):
-                            self.assignment.__dict__["_trip_alloc"].append(_trip)
-                            trip_ids.append(_trip.get_trip_id())
-                        if isinstance(_trip, Charging):
-                            self.assignment.__dict__["_charging_alloc"].append(_trip)
-                    else:
-                        failed_count += 1
-            if not skip_success:
-                print("Failed assignments {}".format(str(failed_count)))
-                df = DataFrame()
-                df["trip_id"] = trip_ids
-                df.to_csv(self.result_dir + "successful.csv", index=False)
-        else:
-            raise NotImplementedError
+    def run_multi(self, prefix, args=None):
+        RunAssistWTC.run_multi(self, prefix, CustomArgParser())

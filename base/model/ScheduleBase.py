@@ -27,9 +27,10 @@ class ScheduleBase(object):
                             break
             s_print("Dummy Missing Assignments {}".format(str(self.required_assignments)))
 
-    def finalize(self):
+    def finalize(self, skip_dummy=False):
         s_print("Expected Dummy Assignments {}".format(str(self.required_assignments)))
-        self.__do_dummy_assign()
+        if skip_dummy:
+            self.__do_dummy_assign()
         if self.assign_util_config.compute:
             self.assignment.write(self.dump_structure.__key__() + "_" + self.additional_prefix)
             self.assignment.write_bus_stat(self.dump_structure.__key__(), self.additional_prefix,

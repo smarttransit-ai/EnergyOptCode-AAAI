@@ -1,9 +1,8 @@
-import math
-
+from base.entity.Bus import is_electric
 from base.entity.Charging import Charging
 from base.entity.MovingTrip import create_mov_trip, movable
 from base.entity.OperatingTrip import OperatingTrip
-from common.configs.model_constants import electric_bus_type, gas_bus_type
+from common.configs.model_constants import electric_bus_type
 
 
 class FeasibilityStatusInfo(object):
@@ -47,53 +46,56 @@ class Allocation(object):
     def __key__(self):
         return self.__val.__key__()
 
-    def __check_feasible(self, _entity):
-        energy_status = False
-        time_status = False
-        entity = None
+    def total_energy(self, _add_entity=None):
         energy = 0
-        if self.__bus_type == electric_bus_type:
-            full_capacity = electric_bus_type.capacity
+        prev_sel_entity = None
+        _all = self.get_list()
+        _all_copy = _all.copy()
+        if _add_entity is not None:
+            _all_copy.append(_add_entity)
+        _all_copy = sorted(_all_copy, key=lambda _entity: _entity.start_s())
+        _adjust_entity = None
+        for i, sel_entity in enumerate(_all_copy):
+            if i + 1 < len(_all_copy):
+                next_sel_entity = _all_copy[i + 1]
+            else:
+                next_sel_entity = None
+            if prev_sel_entity is not None:
+                mov_trip = create_mov_trip(prev_sel_entity, sel_entity)
+                energy += mov_trip.get_energy_consumed(self.__bus_type)
+            if isinstance(sel_entity, OperatingTrip):
+                energy += sel_entity.get_energy_consumed(self.__bus_type)
+            elif isinstance(sel_entity, Charging):
+                energy = max(0, energy - sel_entity.pole.performance * sel_entity.slot.diff_hours())
+            if _add_entity == sel_entity:
+                _adjust_entity = prev_sel_entity if prev_sel_entity is not None else next_sel_entity
+            prev_sel_entity = sel_entity
+        return energy, _adjust_entity
+
+    def __check_feasible(self, _entity):
+        energy = 0
+        _adjust_entity = None
+        if is_electric(self.__val):
+            energy, _adjust_entity = self.total_energy(_entity)
+            if energy <= electric_bus_type.capacity:
+                energy_status = True
+            else:
+                energy_status = False
         else:
             energy_status = True
-            full_capacity = math.inf
-        energy_remaining = full_capacity
         _all = self.get_list()
         _all_copy = _all.copy()
         _all_copy.append(_entity)
-        _pre_sel_entity = None
-        _pre_sel_entity_of_entity = None
-        _energy_remaining_entity = full_capacity
         _all_copy = sorted(_all_copy, key=lambda _entity: _entity.start_time.time_in_seconds)
+        _pre_sel_entity = None
+        time_status = True
         for _sel_entity in _all_copy:
-            if _sel_entity == _entity:
-                _pre_sel_entity_of_entity = _pre_sel_entity
-                _energy_remaining_entity = energy_remaining
             if _pre_sel_entity is not None:
-                is_movable = movable(_pre_sel_entity, _sel_entity)
-                # timing constraint failure
-                if not is_movable:
+                if not movable(_pre_sel_entity, _sel_entity):
                     time_status = False
-                    return FeasibilityStatusInfo(time_status, energy_status, entity, energy)
-                _mov_trip = create_mov_trip(_pre_sel_entity, _sel_entity)
-                energy_remaining -= _mov_trip.get_energy_consumed(self.__bus_type)
-
-            if isinstance(_sel_entity, OperatingTrip):
-                energy_remaining -= _sel_entity.get_energy_consumed(self.__bus_type)
-
-            elif isinstance(_sel_entity, Charging):
-                energy_charged = min(full_capacity, _sel_entity.pole.performance * _sel_entity.slot.diff_hours())
-                energy_remaining = min(full_capacity, energy_remaining + energy_charged)
-
-            if energy_remaining < 0 and self.__bus_type.type_name == electric_bus_type.type_name:
-                entity = _pre_sel_entity_of_entity
-                energy = _energy_remaining_entity
-                return FeasibilityStatusInfo(time_status, energy_status, entity, energy)
+                    break
             _pre_sel_entity = _sel_entity
-        if energy_remaining > 0 or self.__bus_type.type_name == gas_bus_type.type_name:
-            time_status = True
-            energy_status = True
-        return FeasibilityStatusInfo(time_status, energy_status, entity, energy)
+        return FeasibilityStatusInfo(time_status, energy_status, _adjust_entity, energy)
 
     def add(self, _entity):
         _info = self.__check_feasible(_entity)
@@ -187,7 +189,7 @@ class AssignBase(GenericInterface):
                 if len(allocation.get_list()) > 0:
                     self._allocations_dict[alloc_key] = allocation
             else:
-                raise ValueError("__remove_allocation: key doesn't exists")
+                raise ValueError("remove_allocation: key doesn't exists")
             self._count -= 1
             status = True
         return status
@@ -213,6 +215,10 @@ class AssignBase(GenericInterface):
 
     def _movements(self, _val):
         return self._get_alloc_by_val(_val).get_moves()
+
+    def _total_energy_by_bus(self, _val):
+        energy, _ = self._get_alloc_by_val(_val).total_energy()
+        return energy
 
     def _keys(self):
         return self._assignments.keys()

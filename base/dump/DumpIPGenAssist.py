@@ -45,15 +45,11 @@ class DumpIPGenAssist(object):
             all_trips.extend(dump_structure.charging.copy())
         elif _bus_type is None and "charging" in dump_structure.__dict__.keys():
             all_trips.extend(dump_structure.charging.copy())
-        return sorted(all_trips, key=lambda trip: trip.start_time.time_in_seconds)
+        return sorted(all_trips, key=lambda trip: trip.start_s())
 
     @staticmethod
     def combine_key(items):
         return combine_key(items)
-
-    @staticmethod
-    def is_contain_in_combined(_combined_key, items):
-        return is_contain_in_combined(_combined_key, items)
 
     def compute_filtered_data(self, dump_config, dump_structure):
         all_trips = self.get_all_trips(dump_structure)
@@ -63,9 +59,9 @@ class DumpIPGenAssist(object):
         except FileNotFoundError:
             move_trips_pairs = []
             non_move_trips_pairs = []
-            all_trips = sorted(all_trips, key=lambda _trip: _trip.start_time.time_in_seconds)
+            all_trips = sorted(all_trips, key=lambda _trip: _trip.start_s())
             for trip_1 in all_trips:
-                all_trips = sorted(all_trips, key=lambda _trip: _trip.start_time.time_in_seconds)
+                all_trips = sorted(all_trips, key=lambda _trip: _trip.start_s())
                 for trip_2 in all_trips:
                     i = all_trips.index(trip_1)
                     j = all_trips.index(trip_2)

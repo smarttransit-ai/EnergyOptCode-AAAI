@@ -9,25 +9,15 @@ from datetime import datetime
 from base.dump.DumpIPGenAssist import DumpIPGenAssist
 from base.dump.DumpStructure import DumpStructure, DumpStructureIP
 from base.entity.Bus import create_buses
+from base.util.trips_util import extract_trips_minimal, trip_count_csv_file
 from common.Time import diff, time
 from common.configs.global_constants import macosx_directory, dump_directory, \
-    dump_log_directory, dump_info_directory, default_time_tol, data_week_directory
+    dump_log_directory, dump_info_directory, selected_date, rw_mode, default_time_tol, trips_directory, random_seed
+from common.constants import convert_month_day_num_to_str
 from common.util import pickle_util as custom_pickle
 from common.util.common_util import create_dir, delete_dir, s_print_err
 from common.writer.FileAppender import FileAppender
 from common.writer.FileWriter import FileWriter
-
-gtfs_mini_dump_file = data_week_directory + "gtfs_mini_dump.dat"
-trip_count_csv_file = data_week_directory + "trip_counts.csv"
-
-
-def extract_trips_minimal():
-    """
-    Returns:
-        returns minimal version of operating trips,
-        this will reduce the memory usage in dump generation especially in IP
-    """
-    return custom_pickle.load_obj(gtfs_mini_dump_file)
 
 
 def read_bus_line_trip_info(dump_config, file_name):
@@ -70,6 +60,27 @@ def extract_specific_data_random(dump_config, operating_trips=None):
     _selected_trips = {}
     _route_values = []
     available_routes = read_bus_line_trip_info(dump_config, trip_count_csv_file)
+    random.seed(random_seed)
+    random.shuffle(operating_trips)
+    return _extract_data(dump_config, operating_trips, available_routes)
+
+
+def extract_specific_real_data_random(dump_config, operating_trips=None):
+    """
+    Args:
+        dump_config: configuration of the dump
+        operating_trips: available operating_trips
+    Returns:
+        selected operating trips and their corresponding bus line numbers
+        unlike the extract_specific_data_random, here the data is based on real bus service
+        in a particular day.
+    """
+    day = selected_date.day
+    month = selected_date.month
+    month_val, day_val = convert_month_day_num_to_str(str(month) + "/" + str(day))
+    file_name = trips_directory + month_val + "/" + day_val + "/trip_counts.csv"
+    available_routes = read_bus_line_trip_info(file_name, dump_config)
+    random.seed(random_seed)
     random.shuffle(operating_trips)
     return _extract_data(dump_config, operating_trips, available_routes)
 
@@ -79,6 +90,7 @@ def _extract_data(dump_config, operating_trips, available_routes):
     _selected_trips = {}
     for trip in operating_trips:
         bus_line_no = trip.route.route_id
+        # ignoring the shuttle services, consider the available routes
         if bus_line_no not in ["33", "34"] and bus_line_no in available_routes:
             if len(_route_values) < dump_config.route_limit:
                 if bus_line_no in _selected_trips.keys():
@@ -92,26 +104,31 @@ def _extract_data(dump_config, operating_trips, available_routes):
     return _selected_trips, _route_values
 
 
-def generate_random_dump_data_internal(info_enabled=True, dump_config=None, operating_trips=None):
+def generate_random_dump_data_internal(info_enabled=True, dump_config=None, operating_trips=None, suffix=""):
     """
     Args:
         info_enabled: this is a boolean value to determine updating info
         dump_config: dump configuration
         operating_trips: available operating trips
+        suffix: additional suffix to contain multiple dump_structure with same dump_config
     Returns:
         selected operating trips
         Note : this function also update the dump.info file
     """
-    _selected_trips, _route_values = extract_specific_data_random(dump_config, operating_trips)
+    if rw_mode:
+        _selected_trips, _route_values = extract_specific_real_data_random(dump_config, operating_trips)
+    else:
+        _selected_trips, _route_values = extract_specific_data_random(dump_config, operating_trips)
     _filtered_trips = []
     if info_enabled:
-        dump_info_file_name = dump_info_directory + dump_config.__key__() + "_dump.info"
+        dump_info_file_name = dump_info_directory + dump_config.__key__() + suffix + "_dump.info"
         create_dir(dump_info_directory)
         route_details = FileWriter(dump_info_file_name)
         route_details.write("Total number of bus-lines : " + str(dump_config.route_limit))
         route_details.write("Maximum number of trips per bus-line : " + str(dump_config.trip_limit))
         route_details.write("\n[BUS LINE NUMBERS]\n" + "\n".join([str(route_no) for route_no in _route_values]))
         for route_no in _route_values:
+            random.seed(random_seed)
             sample_trips = random.sample(_selected_trips[route_no],
                                          min(len(_selected_trips[route_no]), dump_config.trip_limit))
             route_details.write("\n[TRIPS FOR BUS LINE NUMBER : " + str(route_no) + "]")
@@ -119,7 +136,7 @@ def generate_random_dump_data_internal(info_enabled=True, dump_config=None, oper
             route_details_dict = {}
             for trip in sample_trips:
                 _filtered_trips.append(trip)
-                start_time_in_sec = trip.start_time.time_in_seconds
+                start_time_in_sec = trip.start_s()
                 if start_time_in_sec in route_details_dict:
                     start_time_in_sec += random.randint(1, 100)
                 route_details_dict[start_time_in_sec] = trip
@@ -132,6 +149,7 @@ def generate_random_dump_data_internal(info_enabled=True, dump_config=None, oper
         route_details.close()
     else:
         for route_no in _route_values:
+            random.seed(random_seed)
             sample_trips = random.sample(_selected_trips[route_no],
                                          min(len(_selected_trips[route_no]), dump_config.trip_limit))
             for trip in sample_trips:
@@ -152,12 +170,20 @@ class DumpUtilBase(object):
         self.info_enabled = info_enabled
         self.dump_directory = ""
         self.dump_prefix = ""
+        self.suffix = ""
         self.__setup()
 
     def __setup(self):
         self.dump_directory = dump_directory
         self.log_directory = dump_log_directory
-        self.dump_prefix = "_dump"
+        self.dump_prefix = "dump"
+
+    def get_suffix(self):
+        if self.suffix == "":
+            suffix = "_"
+        else:
+            suffix = "_" + self.suffix + "_"
+        return suffix
 
     def _make_dump_directory(self):
         create_dir(self.dump_directory)
@@ -166,7 +192,9 @@ class DumpUtilBase(object):
         if self.log_enabled:
             time_taken = end - start
             create_dir(self.log_directory)
-            dump_log_file_name = self.log_directory + dump_config.__key__() + self.dump_prefix + ".log"
+
+            dump_log_file_name = self.log_directory + dump_config.__key__() + \
+                                 self.get_suffix() + self.dump_prefix + ".log"
             file_writer = FileAppender(dump_log_file_name)
             file_writer.append("Dump generation started at " + str(start))
             file_writer.append("Dump generation finished at " + str(end))
@@ -174,7 +202,7 @@ class DumpUtilBase(object):
             file_writer.close()
 
     def _load_filtered_data(self, dump_config):
-        file_path = self.dump_directory + dump_config.__key__() + self.dump_prefix + ".dat"
+        file_path = self.dump_directory + dump_config.__key__() + self.get_suffix() + self.dump_prefix + ".dat"
         self._make_dump_directory()
         if not os.path.exists(file_path):
             self.dump_data(dump_config, extract_trips_minimal())
@@ -195,9 +223,10 @@ class DumpUtilBase(object):
 class DumpUtil(DumpUtilBase):
     def dump_data(self, dump_config, operating_trips=None):
         start = datetime.now()
-        _filtered_trips = generate_random_dump_data_internal(self.info_enabled, dump_config, operating_trips)
+        _filtered_trips = generate_random_dump_data_internal(self.info_enabled, dump_config,
+                                                             operating_trips, self.get_suffix())
         self._make_dump_directory()
-        dump_file_name = self.dump_directory + dump_config.__key__() + self.dump_prefix + ".dat"
+        dump_file_name = self.dump_directory + dump_config.__key__() + "_" + self.dump_prefix + ".dat"
         custom_pickle.dump_obj(_filtered_trips, dump_file_name)
         end = datetime.now()
         self.update_dump_log(dump_config, start, end)
@@ -213,17 +242,18 @@ class DumpUtilIP(DumpUtil):
     def __init__(self, is_serial=False, log_enabled=True, info_enabled=True):
         super(DumpUtilIP, self).__init__(is_serial, log_enabled, info_enabled)
         self.dump_ip_assist = DumpIPGenAssist()
+        self.suffix = "ip"
 
     def dump_data(self, dump_config, operating_trips=None):
         start = datetime.now()
-        dump_util = DumpUtil()
+        dump_util = DumpUtil()  # need to replace this method
         dump_structure = dump_util.load_filtered_data(dump_config)
         mnm_temp_store = self.dump_ip_assist.compute_filtered_data(dump_config, dump_structure)
         dump_structure_lp = DumpStructureIP(dump_structure.filtered_trips, dump_structure.ev_buses,
                                             dump_structure.gas_buses, dump_config.__key__(),
                                             mnm_temp_store)
         self._make_dump_directory()
-        dump_file_name = self.dump_directory + dump_config.__key__() + self.dump_prefix + ".dat"
+        dump_file_name = self.dump_directory + dump_config.__key__() + self.get_suffix() + self.dump_prefix + ".dat"
         dump_structure_lp.dump(dump_file_name)
         end = datetime.now()
         self.update_dump_log(dump_config, start, end)

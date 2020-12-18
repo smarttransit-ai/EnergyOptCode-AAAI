@@ -22,12 +22,11 @@ def generate_new_stat(selected_bus, trip, movement_type):
     if is_gas(selected_bus):
         gallon_energy_consumed = bus_energy_consumed
         gasoline_count = 1
-    energy_cost = trip.get_energy_cost(selected_bus.bus_type)
     bus_movement = BusMovement(selected_bus, trip, movement_type)
     internal_stat = InternalStat(bus_duration, kwh_energy_consumed, gallon_energy_consumed,
-                                 energy_cost, electric_count, gasoline_count)
+                                 electric_count, gasoline_count)
     new_stat = BusStat(internal_stat, movement_type,
-                       {trip.start_time.time_in_seconds: bus_movement})
+                       {trip.start_s(): bus_movement})
     return new_stat
 
 
@@ -41,9 +40,9 @@ def get_previous_stat(bus_stats, selected_bus):
 
 def generate_new_charge_stat(selected_bus, trip):
     bus_movement = BusMovement(selected_bus, trip, charging)
-    internal_stat = InternalStat(trip.slot.diff, 0, 0, 0, 1, 0)
+    internal_stat = InternalStat(trip.slot.diff, 0, 0, 1, 0)
     new_stat = BusStat(internal_stat, charging,
-                       {trip.slot.start.time_in_seconds: bus_movement})
+                       {trip.slot.start_time.time_in_seconds: bus_movement})
     return new_stat
 
 

@@ -1,20 +1,19 @@
-import os
-
 import cplex
 
-from algo.int_prog.CustomCPLEXBase import CustomCPLEXBase, CustomCPLEXConstraint, CustomCPLEXVariable
+from algo.common.CPLEXSupport import CustomCPLEXConstraint, CustomCPLEXVariable
+from algo.int_prog.CustomCPLEXBase import CustomCPLEXBase
 from base.dump.DumpIPGenAssist import combine_key
 from base.entity.Bus import is_electric, is_gas
 from base.entity.Charging import create_slots
 from base.entity.EnergyConsumed import cost
-from base.entity.MovingTrip import create_mov_trip, movable, get_mov_cost, is_in_between
+from base.entity.MovingTrip import get_mov_cost, is_in_between
 from base.entity.OperatingTrip import OperatingTrip
-from common.configs.global_constants import output_directory, trip_heading_prefix, charging_heading_prefix
+from common.configs.global_constants import with_charging
 from common.configs.model_constants import electric_bus_type
 
 
 class CustomCPLEX(CustomCPLEXBase):
-    def _set_up_variables(self, is_integer=True):
+    def _set_up_variables(self):
         _mnm_temp_store = self.dump_structure.mnm_temp_store
         _move_trips_pairs = _mnm_temp_store.move_trips_pairs
 
@@ -33,11 +32,7 @@ class CustomCPLEX(CustomCPLEXBase):
                     variables.append(combine_key([_bus, _trip_1, _trip_2]))
                     costs.append(get_mov_cost(_trip_1, _trip_2, _bus.bus_type))
 
-        if is_integer:
-            types = [self.variables.type.binary for i, _ in enumerate(variables)]
-        else:
-            types = [self.variables.type.continuous for i, _ in enumerate(variables)]
-
+        types = [self.variables.type.binary for i, _ in enumerate(variables)]
         ub = [1 for i, _ in enumerate(variables)]
         lb = [0 for i, _ in enumerate(variables)]
 
@@ -106,12 +101,12 @@ class CustomCPLEX(CustomCPLEXBase):
 
                     ind_temp = [assign_1_key, assign_2_key, move_trip_key]
                     val_temp = [-1, -1, 1]
-                    all_trips = sorted(all_trips, key=lambda a_trip: a_trip.start_time.time_in_seconds)
+                    all_trips = sorted(all_trips, key=lambda a_trip: a_trip.start_s())
                     i = all_trips.index(_trip_1)
                     j = all_trips.index(_trip_2)
                     if abs(j - i) > 1:
                         sub_trips = all_trips[i + 1:j]
-                        sub_trips = sorted(sub_trips, key=lambda s_trip: s_trip.start_time.time_in_seconds)
+                        sub_trips = sorted(sub_trips, key=lambda s_trip: s_trip.start_s())
                         for _trip in sub_trips:
                             if is_in_between(_trip_1, _trip, _trip_2):
                                 if is_electric(_bus) or (is_gas(_bus) and isinstance(_trip, OperatingTrip)):
@@ -124,70 +119,16 @@ class CustomCPLEX(CustomCPLEXBase):
                     self._no_of_const += 1
         return CustomCPLEXConstraint(row_names, senses, rhs, row_constraints)
 
-    def _write_assign(self, prefix):
-        variables = self.variables.get_names()
-        x = self.solution.get_values()
-        _filtered_trips = self.dump_structure.filtered_trips
-        _buses = self.dump_structure.all_buses()
-        assign_heading = trip_heading_prefix
-        result_assign = open(output_directory + prefix + "results_assign.csv", "w+")
-        for _bus in _buses:
-            assign_heading += _bus.__str__() + ", "
-        assign_heading += "\n"
-        result_assign.write(assign_heading)
-        for trip in _filtered_trips:
-            if isinstance(trip, OperatingTrip):
-                assign_content = trip.__content__()
-                for _bus in _buses:
-                    key = combine_key([_bus, trip])
-                    temp_value = 0
-                    if key in variables:
-                        temp_value = x[variables.index(key)]
-                    assign_content += str(temp_value) + ","
-                assign_content += "\n"
-                result_assign.write(assign_content)
-                result_assign.flush()
-                os.fsync(result_assign.fileno())
-        result_assign.close()
-
-    def _write_move(self, prefix):
-        variables = self.variables.get_names()
-        x = self.solution.get_values()
-        _buses = self.dump_structure.all_buses()
-        _all_trips = self.get_all_trips()
-        result_move = open(output_directory + prefix + "results_move.csv", "w+")
-        move_heading = trip_heading_prefix
-        for _bus in _buses:
-            move_heading += _bus.__str__() + ", "
-        move_heading += "\n"
-        result_move.write(move_heading)
-
-        for trip_1, trip_2 in self.dump_structure.mnm_temp_store.move_trips_pairs:
-            _moving_trip = create_mov_trip(trip_1, trip_2)
-            move_content = _moving_trip.__content__()
-            for _bus in _buses:
-                if movable(trip_1, trip_2) and _moving_trip.route.distance > 0:
-                    key = combine_key([_bus, trip_1, trip_2])
-                    temp_value = 0
-                    if key in variables:
-                        temp_value = x[variables.index(key)]
-                    move_content += str(temp_value) + ","
-            move_content += "\n"
-            result_move.write(move_content)
-            result_move.flush()
-            os.fsync(result_move.fileno())
-        result_move.close()
-
     def _write_charge(self, prefix):
         pass
 
 
 class CustomCPLEXWTC(CustomCPLEX):
-    def _set_up_variables(self, is_integer=True):
+    def _set_up_variables(self):
         _mnm_temp_store = self.dump_structure.mnm_temp_store
         _move_trips_pairs = _mnm_temp_store.move_trips_pairs
 
-        _custom_var = super(CustomCPLEXWTC, self)._set_up_variables(is_integer)
+        _custom_var = super(CustomCPLEXWTC, self)._set_up_variables()
         variables = _custom_var.variables
         types = _custom_var.types
         lb = _custom_var.lb
@@ -199,10 +140,7 @@ class CustomCPLEXWTC(CustomCPLEX):
             for _charging in self.dump_structure.charging:
                 variables.append(combine_key([_bus, _charging]))
                 _count += 1
-        if is_integer:
-            types.extend([self.variables.type.binary for _ in range(_count)])
-        else:
-            types.extend([self.variables.type.continuous for _ in range(_count)])
+        types.extend([self.variables.type.binary for _ in range(_count)])
         costs.extend([0 for _ in range(_count)])
         lb.extend([0 for _ in range(_count)])
         ub.extend([1 for _ in range(_count)])
@@ -342,38 +280,23 @@ class CustomCPLEXWTC(CustomCPLEX):
 
         return CustomCPLEXConstraint(row_names, senses, rhs, row_constraints)
 
-    def _write_charge(self, prefix):
-        variables = self.variables.get_names()
-        x = self.solution.get_values()
-        _buses = self.dump_structure.ev_buses
-        _charging = self.dump_structure.charging
-        _charge_file_name = output_directory + prefix + "results_charge.csv"
-        result_charge = open(_charge_file_name, "w+")
-        charge_heading = charging_heading_prefix
-        for _bus in _buses:
-            if is_electric(_bus):
-                charge_heading += _bus.__str__() + ", "
-        charge_heading += "\n"
-        result_charge.write(charge_heading)
-        added_at_least_once = False
-        for i, selected_charge in enumerate(_charging):
-            add_this_content = False
-            charge_content = selected_charge.__content__()
-            for _bus in _buses:
-                if is_electric(_bus):
-                    key = combine_key([_bus, selected_charge])
-                    temp_value = 0
-                    if key in variables:
-                        temp_value = x[variables.index(key)]
-                        if temp_value > 0:
-                            add_this_content = True
-                            added_at_least_once = True
-                    charge_content += str(temp_value) + ","
-            charge_content += "\n"
-            if add_this_content:
-                result_charge.write(charge_content)
-                result_charge.flush()
-                os.fsync(result_charge.fileno())
-        result_charge.close()
-        if not added_at_least_once:
-            os.remove(_charge_file_name)
+
+class InvalidCustomCPLEXClassException(Exception):
+    def __init__(self, *args):
+        super(InvalidCustomCPLEXClassException, self).__init__(args)
+
+
+if with_charging:
+    custom_cplex_class = CustomCPLEXWTC
+else:
+    custom_cplex_class = CustomCPLEX
+
+
+def create_custom_cplex(_custom_cplex_class, dump_config, *args):
+    if issubclass(_custom_cplex_class, CustomCPLEXWTC):
+        custom_cplex = CustomCPLEXWTC(dump_config, *args)
+    elif issubclass(_custom_cplex_class, CustomCPLEX):
+        custom_cplex = CustomCPLEX(dump_config, *args)
+    else:
+        raise InvalidCustomCPLEXClassException("Invalid CustomCPLEX Class {}".format(_custom_cplex_class.__name__))
+    return custom_cplex

@@ -1,9 +1,9 @@
+from base.entity.EnergyConsumed import energy_consumed
 from base.entity.Location import RoutePoint
 from base.entity.Trip import Trip
 from common.Time import diff
-
-# main class used to denote the operating trips
 from common.configs.global_constants import key_end
+from common.configs.model_constants import electric_bus_type, gas_bus_type
 
 
 class OperatingTrip(Trip):
@@ -38,3 +38,9 @@ class OperatingTrip(Trip):
 
     def __key__(self):
         return "O" + str(self.trip_id) + key_end
+
+    def __content__(self):
+        return self.get_trip_id() + "," + self.__str__() + "," + \
+               self.start_time.time + "," + self.get_end_time().time + "," + \
+               str(energy_consumed(self.route, electric_bus_type).energy) + "," + \
+               str(energy_consumed(self.route, gas_bus_type).energy) + ","

@@ -3,6 +3,7 @@ class Time(object):
     def __init__(self, time_str):
         self.time = time_str
         self.time_only = ""
+        self.time_h = ""
         self.day = 0
         self.hour = 0
         self.minute = 0
@@ -23,6 +24,26 @@ class Time(object):
         self.second = int(self.second)
         self.time_in_seconds = int(self.day * 86400 +
                                    self.hour * 3600 + self.minute * 60 + self.second)
+        if self.day > 0:
+            if self.day > 1:
+                self.time_h = "{} days ".format(str(self.day))
+            else:
+                self.time_h = "{} day ".format(str(self.day))
+        if self.hour > 0:
+            if self.hour > 1:
+                self.time_h += "{} hours ".format(str(self.hour))
+            else:
+                self.time_h += "{} hour ".format(str(self.hour))
+        if self.minute > 0:
+            if self.minute > 1:
+                self.time_h += "{} minutes ".format(str(self.minute))
+            else:
+                self.time_h += "{} minute ".format(str(self.minute))
+        if self.second > 0:
+            if self.second > 1:
+                self.time_h += "{} seconds ".format(str(self.second))
+            else:
+                self.time_h += "{} second ".format(str(self.second))
 
     def __key__(self):
         key_temp = self.time.replace(":", "")

@@ -1,5 +1,5 @@
 from common.configs.global_constants import cost_of_electricity_per_kwh, \
-    cost_of_gas_price_per_gallon, dummy_cost, dummy_energy
+    cost_of_gas_per_gallon, dummy_cost, dummy_energy, co2_emission_per_kwh, co2_emission_per_gallon
 from common.configs.model_constants import electric_bus_type, gas_bus_type, dummy_bus_type
 
 # used to indicate the energy consumption
@@ -12,6 +12,7 @@ class EnergyConsumed(object):
         self.type = vehicle_type
         self.energy = 0
         self.cost = 0
+        self.co2_emission = 0
 
 
 # used to indicate the electric energy consumption
@@ -21,6 +22,7 @@ class ElectricEnergyConsumed(EnergyConsumed):
 
         self.energy = self.route.soc * battery_capacity * 0.01
         self.cost = self.energy * cost_of_electricity_per_kwh
+        self.co2_emission = self.energy * co2_emission_per_kwh
 
 
 # used to indicate the gas energy consumption
@@ -28,7 +30,8 @@ class GasEnergyConsumed(EnergyConsumed):
     def __init__(self, route):
         super(GasEnergyConsumed, self).__init__(route, gas_bus_type)
         self.energy = self.route.gasoline
-        self.cost = self.energy * cost_of_gas_price_per_gallon
+        self.cost = self.energy * cost_of_gas_per_gallon
+        self.co2_emission = self.energy * co2_emission_per_gallon
 
 
 # used to indicate the dummy energy consumption
@@ -56,6 +59,10 @@ def cost(_bus, _trip):
 
 def energy(_bus, _trip):
     return energy_consumed(_trip.route, _bus.bus_type).energy
+
+
+def emission(_bus, _trip):
+    return energy_consumed(_trip.route, _bus.bus_type).co2_emission
 
 
 def electric_energy(_trip):

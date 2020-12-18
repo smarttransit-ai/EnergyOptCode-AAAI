@@ -2,7 +2,7 @@ from algo.common.loader import mov_trips
 from base.entity.Trip import Trip
 from common.Time import add, diff, t_less_or_eq, t_less_than
 from common.configs.global_constants import day_code, key_end, cost_of_electricity_per_kwh, \
-    cost_of_gas_price_per_gallon, agency_mode, default_dist_tol
+    cost_of_gas_per_gallon, agency_mode, default_dist_tol
 from common.configs.model_constants import electric_bus_type, gas_bus_type
 from common.mode.RunMode import battery_capacity
 from common.mode.ServiceMode import get_range_values
@@ -51,7 +51,7 @@ def get_mov_cost(_trip_1, _trip_2, _bus_type):
     if _bus_type.type_name == electric_bus_type.type_name:
         energy = mv_trip_electric * battery_capacity * 0.01 * cost_of_electricity_per_kwh
     elif _bus_type.type_name == gas_bus_type.type_name:
-        energy = mv_trip_gasoline * cost_of_gas_price_per_gallon
+        energy = mv_trip_gasoline * cost_of_gas_per_gallon
     return energy
 
 

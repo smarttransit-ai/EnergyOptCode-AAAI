@@ -106,3 +106,17 @@ def get_pole_performance(run_mode):
     if run_mode not in pole_performances.keys():
         return pole_performances[default_run_mode]
     return pole_performances[run_mode]
+
+# SAMPLE TESTING
+
+# print(get_r_t_values(RunMode.FULL))
+# print(get_r_t_values(RunMode.SAMPLE))
+
+# print(get_r_t_h_values(RunMode.FULL))
+# print(get_r_t_h_values(RunMode.SAMPLE))
+
+# print(get_battery_capacity(RunMode.FULL))
+# print(get_battery_capacity(RunMode.SAMPLE))
+
+# print(get_pole_performance(RunMode.FULL))
+# print(get_pole_performance(RunMode.SAMPLE))

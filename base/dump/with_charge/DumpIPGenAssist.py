@@ -73,18 +73,13 @@ class DumpIPGenAssistWTC(DumpIPGenAssist):
                 move_energies[slot_key] = {}
         for slot in slots:
             s_slot_key = self.combine_key([slot])
-            all_trips = sorted(all_trips, key=lambda _trip: _trip.start_time.time_in_seconds)
-            for trip_1 in all_trips:
+            for i, trip_1 in enumerate(all_trips):
                 if is_mov_trip_in_slot(slot, trip_1):
-                    all_trips = sorted(all_trips, key=lambda _trip: _trip.start_time.time_in_seconds)
-                    for trip_2 in all_trips:
-                        i = all_trips.index(trip_1)
-                        j = all_trips.index(trip_2)
-                        if j > i:
-                            key = self.combine_key([trip_1, trip_2])
-                            if movable(trip_1, trip_2):
-                                move_key_list[s_slot_key].append(key)
-                                energy = get_mov_energy(trip_1, trip_2, electric_bus_type)
-                                move_energies[s_slot_key][key] = energy
+                    for _, trip_2 in enumerate(all_trips[i + 1:]):
+                        key = self.combine_key([trip_1, trip_2])
+                        if movable(trip_1, trip_2):
+                            move_key_list[s_slot_key].append(key)
+                            energy = get_mov_energy(trip_1, trip_2, electric_bus_type)
+                            move_energies[s_slot_key][key] = energy
         mov_temp_store = MoveMiniTempStore(move_key_list, move_energies)
         return mov_temp_store

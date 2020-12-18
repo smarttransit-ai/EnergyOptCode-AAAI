@@ -3,6 +3,7 @@ from base.util.common_util import get_euclidean_distance
 from common.Time import time
 
 
+# route is a static entry, of one way route from one place to another
 class Route(object):
     def __init__(self, start_pos, end_pos):
         self.start_pos = start_pos

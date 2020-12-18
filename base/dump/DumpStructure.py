@@ -1,7 +1,3 @@
-# -------------------------------------------------------------------------------- #
-#                           STRUCTURE OF RANDOM DUMP DATA                          #
-# -------------------------------------------------------------------------------- #
-
 from common.util import pickle_util as custom_pickle
 
 
@@ -16,6 +12,10 @@ class DumpStructureBase(object):
         self.ev_buses = ev_buses
         self.gas_buses = gas_buses
         self.__prefix = prefix
+
+    def copy(self):
+        return DumpStructureBase(self.filtered_trips.copy(), self.ev_buses.copy(),
+                                 self.gas_buses.copy(), self.__key__())
 
     def all_buses(self):
         return self.ev_buses + self.gas_buses
@@ -35,8 +35,15 @@ class DumpStructure(DumpStructureBase):
     def __init__(self, filtered_trips, ev_buses, gas_buses, prefix):
         super(DumpStructure, self).__init__(filtered_trips, ev_buses, gas_buses, prefix)
 
+    def copy(self):
+        return DumpStructure(self.filtered_trips.copy(), self.ev_buses.copy(), self.gas_buses.copy(), self.__key__())
+
 
 class DumpStructureIP(DumpStructure):
     def __init__(self, filtered_trips, ev_buses, gas_buses, prefix, mnm_temp_store):
         super(DumpStructureIP, self).__init__(filtered_trips, ev_buses, gas_buses, prefix)
         self.mnm_temp_store = mnm_temp_store
+
+    def copy(self):
+        return DumpStructureIP(self.filtered_trips.copy(), self.ev_buses.copy(),
+                               self.gas_buses.copy(), self.__key__(), self.mnm_temp_store)
