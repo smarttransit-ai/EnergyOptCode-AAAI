@@ -1,0 +1,1 @@
+date,no_of_trips,real_evs,real_gvs,real_ev_assigns,greedy_ev_assigns,sim_anneal_ev_assigns,gen_algo_ev_assigns,real_cost,greedy_cost,sim_anneal_cost,gen_algo_cost,real_emission,greedy_emission,sim_anneal_emission,gen_algo_emission

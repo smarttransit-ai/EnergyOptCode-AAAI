@@ -1,6 +1,7 @@
 import math
 import os
 from datetime import datetime
+import pandas as pd
 
 from algo.common.FUBase import ForcedUpdate
 from base.dump.DumpConfig import DumpConfig
@@ -286,9 +287,7 @@ class FUAssist(RunAssistWTC):
         date_str = self._selected_date.strftime("%Y/%m/%d")
         print("Assigning trips to buses as of data for date {}".format(date_str))
         dump_structure = self._dump_util.load_filtered_data(dump_config)
-        input_file = open(file_name, "r+")
-        lines = input_file.readlines()
-
+        df = pd.read_csv(file_name)
         buses_dicts = {}
         for x in range(101, 152):
             buses_dicts[x] = bus(str(x), gas_bus_type)
@@ -305,14 +304,18 @@ class FUAssist(RunAssistWTC):
         real_times = {}
         real_times_stamps = {}
         trips = []
-        for line in lines[1:]:
-            serial, trip_id, vehicle_id, other = line.split(",", 3)
-            others = other.split(",")
-            start_time_stamp = others[-5]
-            end_time_stamp = others[-4]
-            start_time = others[-3].split(" ")[1] + ":00"
-            end_time = others[-2].split(" ")[1] + ":00"
-            route = others[-1]
+        for i in range(len(df)):
+            entry = df.iloc[i]
+            try:
+                trip_id = str(int(entry["tatripid"]))
+            except ValueError:
+                trip_id = "null"
+            vehicle_id = str(entry["vid"])
+            start_time_stamp = entry["start_timestamp"]
+            end_time_stamp = entry["end_timestamp"]
+            start_time = entry["start_tmstmp"].split(" ")[1] + ":00"
+            end_time = entry["end_tmstmp"].split(" ")[1] + ":00"
+            route = str(entry["route_id"])
             current_trip = None
             current_vehicle = None
             start_time_stamp = int(float(start_time_stamp))
