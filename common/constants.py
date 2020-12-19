@@ -49,13 +49,6 @@ for key in months.keys():
     months_rev[val] = key
 
 
-def convert_month_day_str_to_num(date_str):
-    month, day = date_str.split("/")
-    month_val = months_rev[month]
-    day_val = days_rev[day]
-    return month_val, day_val
-
-
 def convert_month_day_num_to_str(date_str):
     month, day = date_str.split("/")
     month_val = months[int(month)]
