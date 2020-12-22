@@ -13,9 +13,10 @@ gen_alg_assist = create_gen_alg_assist()
 if run_mode == RunMode.FULL:
     gen_alg_assist.inject_real_data_trips()
 arg_parser = ConfigParserCommon()
-args = arg_parser.parse_args()
+args = arg_parser.parse_args().__dict__
 args["interface"] = "GAAction"
-suffix = args.suffix
+gen_alg_assist.add_params(args)
+suffix = args["suffix"]
 if suffix != "":
     gen_alg_assist.set_summary_suffix(suffix)
 run_function_generic(dump_util, func=gen_alg_assist.run_multi, args=("gen_alg",))
