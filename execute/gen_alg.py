@@ -14,6 +14,7 @@ if run_mode == RunMode.FULL:
     gen_alg_assist.inject_real_data_trips()
 arg_parser = ConfigParserCommon()
 args = arg_parser.parse_args()
+args["interface"] = "GAAction"
 suffix = args.suffix
 if suffix != "":
     gen_alg_assist.set_summary_suffix(suffix)
