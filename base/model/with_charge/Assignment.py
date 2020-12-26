@@ -45,7 +45,6 @@ class AssignmentWTC(Assignment):
                             _res_info_add = self.add(selected_trip, selected_bus)
                             if _res_info_add.feasible():
                                 self._trip_alloc.append(selected_trip)
-                                self._charging_alloc.append(_res_info.entity())
                                 status = True
                     else:
                         if isinstance(selected_trip, OperatingTrip):
