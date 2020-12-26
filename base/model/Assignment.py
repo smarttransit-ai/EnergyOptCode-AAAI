@@ -51,9 +51,6 @@ class Assignment(AssignBase):
     def set_weight(self, weight_ev, weight_gv):
         self._weight = Weight(float(weight_ev), float(weight_gv))
 
-    def get_assignment_type(self):
-        return self._assignment_type
-
     def update_output_dir(self, u_output_directory):
         self._assign_assist.update_output_dir(u_output_directory)
 
@@ -94,31 +91,6 @@ class Assignment(AssignBase):
 
     def bus_movements(self, selected_bus):
         return super(Assignment, self)._movements(selected_bus)
-
-    def order_bus_by_ms_ratio(self):
-        """
-        Returns:
-            order the buses by moving/service cost ratio
-        """
-        buses = self.get_buses()
-        trip_move_cost_ratio = {}
-        for bus in buses:
-            movements = self.bus_movements(bus)
-            ser_cost = 0
-            mov_cost = 0
-            for movement in movements:
-                mov_cost += movement.get_energy_cost(bus.bus_type)
-            for sel_trip in self.list_bus_allocations(bus):
-                ser_cost += sel_trip.get_energy_cost(bus.bus_type)
-            ratio = mov_cost / ser_cost
-            if ratio in trip_move_cost_ratio:
-                trip_move_cost_ratio[ratio].append(bus)
-            else:
-                trip_move_cost_ratio[ratio] = [bus]
-        sorted_buses = []
-        for cost in sorted(trip_move_cost_ratio.keys()):
-            sorted_buses.extend(trip_move_cost_ratio[cost])
-        return sorted_buses
 
     def compute_all_movements(self, buses):
         all_movements = []

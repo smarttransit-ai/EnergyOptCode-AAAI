@@ -6,15 +6,12 @@ from base.interface.SwapInterface import SwapInterface
 
 class Strategy(Enum):
     SARandom = 0
-    SASMRatio = 1
 
 
 def get_buses_by_strategy(assign, strategy):
     buses = []
     if strategy == Strategy.SARandom:
         buses = assign.get_buses()
-    elif strategy == Strategy.SASMRatio:
-        buses = assign.order_bus_by_ms_ratio()
     return buses
 
 
