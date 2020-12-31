@@ -41,7 +41,7 @@ Algorithms can be executed in one of two modes:
 
 #### Requirements
 1. Python 3.7
-2. Install all modules listed in ```requirements.txt``` (using the command ```pip install requirements.txt```).
+2. Install all modules listed in [requirements.txt](requirements.txt) (using the command ```pip install requirements.txt```).
 
 
 #### FULL MODE
