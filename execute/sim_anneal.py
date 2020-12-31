@@ -19,4 +19,4 @@ sim_anneal_assist.add_params(args)
 suffix = args["suffix"]
 if suffix != "":
     sim_anneal_assist.set_summary_suffix(suffix)
-run_function_generic(dump_util, func=sim_anneal_assist.run, args=("sim_anneal",))
+run_function_generic(dump_util, func=sim_anneal_assist.run_multi, args=("sim_anneal",))

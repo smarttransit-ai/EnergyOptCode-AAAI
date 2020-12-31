@@ -2,7 +2,6 @@ import os
 
 from common.mode.AgencyMode import get_agency_mode
 from common.mode.ChargeMode import get_charge_mode
-from common.mode.RWMode import get_rw_mode
 from common.mode.RunMode import get_run_mode
 from common.mode.ServiceMode import get_service_mode
 from common.parsers.ConfigParser import main_conf_parser
@@ -11,7 +10,6 @@ agency_mode_key = main_conf_parser.get_str('MODE', 'agency_mode')
 day_code_key = main_conf_parser.get_str('MODE', 'day_code')
 run_mode_key = main_conf_parser.get_str('MODE', 'run_mode')
 charge_mode_key = main_conf_parser.get_str('MODE', 'enable_charging')
-rw_mode_key = main_conf_parser.get_str('MODE', 'enable_real_world')
 
 dummy_energy = main_conf_parser.get_float('CONSTANTS', 'dummy_energy')
 dummy_cost = main_conf_parser.get_float('CONSTANTS', 'dummy_cost')
@@ -33,7 +31,6 @@ agency_mode = get_agency_mode(agency_mode_key)
 day_code = get_service_mode(day_code_key, agency_mode_key)
 run_mode = get_run_mode(run_mode_key)
 with_charging = get_charge_mode(charge_mode_key).value
-rw_mode = get_rw_mode(rw_mode_key).value
 
 agency_mode_val = agency_mode.value
 day_code_val = day_code.value

@@ -12,8 +12,7 @@ from base.entity.Bus import create_buses
 from base.util.trips_util import extract_trips_minimal, trip_count_csv_file
 from common.Time import diff, time
 from common.configs.global_constants import macosx_directory, dump_directory, \
-    dump_log_directory, dump_info_directory, selected_date, rw_mode, default_time_tol, trips_directory, random_seed
-from common.constants import convert_month_day_num_to_str
+    dump_log_directory, dump_info_directory, default_time_tol, random_seed
 from common.util import pickle_util as custom_pickle
 from common.util.common_util import create_dir, delete_dir, s_print_err
 from common.writer.FileAppender import FileAppender
@@ -65,26 +64,6 @@ def extract_specific_data_random(dump_config, operating_trips=None):
     return _extract_data(dump_config, operating_trips, available_routes)
 
 
-def extract_specific_real_data_random(dump_config, operating_trips=None):
-    """
-    Args:
-        dump_config: configuration of the dump
-        operating_trips: available operating_trips
-    Returns:
-        selected operating trips and their corresponding bus line numbers
-        unlike the extract_specific_data_random, here the data is based on real bus service
-        in a particular day.
-    """
-    day = selected_date.day
-    month = selected_date.month
-    month_val, day_val = convert_month_day_num_to_str(str(month) + "/" + str(day))
-    file_name = trips_directory + month_val + "/" + day_val + "/trip_counts.csv"
-    available_routes = read_bus_line_trip_info(file_name, dump_config)
-    random.seed(random_seed)
-    random.shuffle(operating_trips)
-    return _extract_data(dump_config, operating_trips, available_routes)
-
-
 def _extract_data(dump_config, operating_trips, available_routes):
     _route_values = []
     _selected_trips = {}
@@ -115,10 +94,7 @@ def generate_random_dump_data_internal(info_enabled=True, dump_config=None, oper
         selected operating trips
         Note : this function also update the dump.info file
     """
-    if rw_mode:
-        _selected_trips, _route_values = extract_specific_real_data_random(dump_config, operating_trips)
-    else:
-        _selected_trips, _route_values = extract_specific_data_random(dump_config, operating_trips)
+    _selected_trips, _route_values = extract_specific_data_random(dump_config, operating_trips)
     _filtered_trips = []
     if info_enabled:
         dump_info_file_name = dump_info_directory + dump_config.__key__() + suffix + "_dump.info"

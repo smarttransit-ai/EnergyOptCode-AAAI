@@ -9,7 +9,6 @@ from common.configs.global_constants import run_mode
 from common.mode.RunMode import RunMode
 from common.parsers.ArgParser import ConfigParserCommon
 
-
 greedy_assist = create_greedy_assist()
 if run_mode == RunMode.FULL:
     greedy_assist.inject_real_data_trips()

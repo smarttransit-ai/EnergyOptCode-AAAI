@@ -1,6 +1,7 @@
 import math
 import os
 from datetime import datetime
+
 import pandas as pd
 
 from algo.common.FUBase import ForcedUpdate
