@@ -9,7 +9,7 @@ geographiclib==1.50
 geopy==2.0.0
 idna==2.10
 Jinja2==2.11.2
-lxml==4.5.2
+lxml==4.6.2
 MarkupSafe==1.1.1
 numpy==1.19.0
 pandas==1.0.5
