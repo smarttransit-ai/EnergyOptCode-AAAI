@@ -297,25 +297,6 @@ def merge_json_dump():
     full_json_responses = {}
 
     _data_week_directory = data_week_directory
-    if agency_mode == "DATA_2018":
-        suffices_2018 = ["5_8", "9", "10_11", "12_13", "14_15", "16_17", "18_19", "20_22"]
-        mac_os_dir = _data_week_directory + "json_dumps/__MACOSX"
-        for suffix in suffices_2018:
-            json_dump_dir = _data_week_directory + "json_dumps/json_dump_" + suffix
-            _json_dump_file = json_dump_dir + "/json_dump.dat"
-            json_dump_zip_file = json_dump_dir + ".zip"
-            with zipfile.ZipFile(json_dump_zip_file, "r") as zip_ref:
-                zip_ref.extractall(_data_week_directory + "json_dumps/")
-            try:
-                json_responses = custom_pickle.load_obj(_json_dump_file)
-                full_json_responses.update(json_responses.copy())
-                if os.path.exists(json_dump_dir):
-                    shutil.rmtree(json_dump_dir)
-            except FileNotFoundError:
-                s_print_err(_json_dump_file + " is missing !!!")
-        if os.path.exists(mac_os_dir):
-            shutil.rmtree(mac_os_dir)
-
     if agency_mode == "DATA_2019":
         suffices_2019 = ["5_11", "11_17", "17_23"]
         for suffix in suffices_2019:
