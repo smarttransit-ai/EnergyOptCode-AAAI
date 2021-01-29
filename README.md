@@ -1,3 +1,15 @@
+# ABOUT
+
+This repository describes the results of the code and the data for the following paper - https://smarttransit.ai/files/aaai21.pdf. 
+
+### ABSTRACT 
+
+*Affordable public transit services are crucial for communities since they enable residents to access employment, education, and other services. Unfortunately, transit services that provide wide coverage tend to suffer from relatively low utilization, which results in high fuel usage per passenger per mile, leading to high operating costs and environmental impact. Electric vehicles (EVs) can reduce energy costs and environmental impact, but most public transit agencies have to employ them in combination with conventional, internal-combustion engine vehicles due to the high upfront costs of EVs. To make the best use of such a mixed fleet of vehicles, transit agencies need to optimize route assignments and charging schedules, which presents a challenging problem for large transit networks. We introduce a novel problem formulation to minimize fuel and electricity use by assigning vehicles to transit trips and scheduling them for charging, while serving an existing fixed-route transit schedule. We present an integer program for optimal assignment and scheduling, and we propose polynomial-time heuristic and meta-heuristic algorithms for larger networks. We evaluate our algorithms on the public transit service of Chattanooga, TN using operational data collected from transit vehicles. Our results show that the proposed algorithms are scalable and can reduce energy use and, hence, environmental impact and operational costs. For Chattanooga, the proposed algorithms can save $145,635 in energy costs and 576.7 metric tons of CO2 emission annually.*
+
+### ACKNOWLEDGEMENT
+
+This mate- rial is based upon work supported by the Department of Energy, Office of Energy Efficiency and Renewable Energy (EERE), under Award Number DE-EE0008467. Disclaimer: This report was prepared as an account of work sponsored by an agency of the United States Government. Neither the United States Government nor any agency thereof, nor any of their employees, makes any warranty, express or implied, or assumes any legal liability or responsibility for the accuracy, completeness, or usefulness of any information, appa- ratus, product, or process disclosed, or represents that its use would not infringe privately owned rights.
+
 ### DIRECTORIES
 
 [algo](algo): Python source code for greedy approach, simulated annealing, genetic algorithm, and integer programming
