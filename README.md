@@ -8,7 +8,9 @@ This repository describes the results of the code and the data for the following
 
 ### ACKNOWLEDGEMENT
 
-This mate- rial is based upon work supported by the Department of Energy, Office of Energy Efficiency and Renewable Energy (EERE), under Award Number DE-EE0008467. Disclaimer: This report was prepared as an account of work sponsored by an agency of the United States Government. Neither the United States Government nor any agency thereof, nor any of their employees, makes any warranty, express or implied, or assumes any legal liability or responsibility for the accuracy, completeness, or usefulness of any information, appa- ratus, product, or process disclosed, or represents that its use would not infringe privately owned rights.
+This material is based upon work supported by the Department of Energy, Office of Energy Efficiency and Renewable Energy (EERE), under Award Number DE-EE0008467. 
+
+**Disclaimer**: This report was prepared as an account of work sponsored by an agency of the United States Government. Neither the United States Government nor any agency thereof, nor any of their employees, makes any warranty, express or implied, or assumes any legal liability or responsibility for the accuracy, completeness, or usefulness of any information, appa- ratus, product, or process disclosed, or represents that its use would not infringe privately owned rights.
 
 ### DIRECTORIES
 
