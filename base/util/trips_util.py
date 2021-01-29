@@ -70,13 +70,16 @@ def merge_files(file_name):
     """
     import os
     contents = []
-    for root, dirs, files in os.walk(data_week_directory):
-        for file in files:
-            _file_path = os.path.join(root, file)
-            if _file_path.startswith(file_name.replace(".csv", "")):
-                sub_file = open(_file_path, "r+")
-                contents.extend(sub_file.readlines())
-                sub_file.close()
+    i = 0
+    while True:
+        sub_file_path = file_name.replace(".csv", f"/{i}.csv")
+        if os.path.exists(sub_file_path):
+            sub_file = open(sub_file_path, "r+")
+            contents.extend(sub_file.readlines())
+            sub_file.close()
+            i += 1
+        else:
+            break
     if len(contents) > 0:
         merge_file = open(file_name, "w+")
         merge_file.writelines(contents)
@@ -89,19 +92,15 @@ def split_files(file_name, lines_limit=500000):
         file_name: name of the file, probably the file_name for energy estimates
         lines_limit: number of lines for each smaller files generated from the large file
     """
-    import shutil
     import pandas as pd
-    temp_file_name = file_name.replace(".csv", "_temp.csv")
-    shutil.move(file_name, temp_file_name)
     dir_name = file_name.replace(".csv", "")
-    df = pd.read_csv(temp_file_name, usecols=["Start_Lat", "Start_Lon",
-                                              "End_Lat", "End_Lon", "Path_Timestamp",
-                                              "Predicted_Values"])
+    df = pd.read_csv(file_name, usecols=["Start_Lat", "Start_Lon",
+                                         "End_Lat", "End_Lon", "Path_Timestamp",
+                                         "Predicted_Values"], index_col=False)
     df.to_csv(file_name, columns=["Start_Lat", "Start_Lon", "End_Lat", "End_Lon", "Path_Timestamp",
                                   "Predicted_Values"], index=False)
     input_file = open(file_name, "r+")
     contents = input_file.readlines()
-    contents[0] = "start_lat, start_lon, end_lat, end_lon, timestamp, energy\n"
     number_of_sub_portion = int(len(contents) / lines_limit)
     create_dir(dir_name)
     for i in range(number_of_sub_portion + 2):
@@ -119,6 +118,7 @@ def get_energy_values(file_name):
         dictionary of energy estimates
     """
     import os
+    import pandas as pd
     line_count = 0
     time_stamp_day_code = get_time_stamp(day_code)
     energy_consumptions = {}
@@ -126,7 +126,13 @@ def get_energy_values(file_name):
     try:
         if not os.path.exists(file_name):
             merge_files(file_name)
+        df = pd.read_csv(file_name, usecols=["Start_Lat", "Start_Lon",
+                                             "End_Lat", "End_Lon", "Path_Timestamp",
+                                             "Predicted_Values"], index_col=False)
+        df.to_csv(file_name, columns=["Start_Lat", "Start_Lon", "End_Lat", "End_Lon", "Path_Timestamp",
+                                      "Predicted_Values"], index=False)
         _trips_csv_file = open(file_name, "r+")
+
         for line in _trips_csv_file.readlines()[1:]:
             line_count += 1
             start_lat, start_lon, end_lat, end_lon, timestamp, energy = line.split(",")
@@ -145,38 +151,6 @@ def get_energy_values(file_name):
     except FileNotFoundError:
         s_print_err("{} file is missing !!!".format(file_name))
     return energy_consumptions.copy()
-
-
-def get_energy_values_step_level(file_name):
-    """
-    Args:
-        file_name: name of the file containing energy estimates
-    Returns:
-        dictionary of energy estimates
-    """
-    import os
-    line_count = 0
-    _time_stamp_day_code = get_time_stamp(day_code)
-    energy_consumptions = {}
-    try:
-        if not os.path.exists(file_name):
-            merge_files(file_name)
-        _trips_csv_file = open(file_name, "r+")
-        for line in _trips_csv_file.readlines()[1:]:
-            line_count += 1
-            _, _step_id, _start_lat, _start_lon, _end_lat, _end_lon, _timestamp, energy = line.split(",")
-            _key = round(float(_start_lat), 5), round(float(_start_lon), 5), \
-                   round(float(_end_lat), 5), round(float(_end_lon), 5), \
-                   int(_step_id), int(_timestamp) - _time_stamp_day_code
-
-            energy_value = 0
-            if _key in energy_consumptions.keys():
-                energy_value = energy_consumptions[_key]
-            energy_value += float(energy)
-            energy_consumptions[_key] = energy_value
-    except FileNotFoundError:
-        s_print_err("{} file is missing !!!".format(file_name))
-    return energy_consumptions
 
 
 def extract_trips():
