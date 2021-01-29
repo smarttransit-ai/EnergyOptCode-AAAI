@@ -6,7 +6,7 @@ from base.util.common_util import fetch_shapes, fetch_trips, fetch_stops, fetch_
 from common.configs.global_constants import data_week_directory, day_code, agency_mode
 from common.mode.ServiceMode import get_time_stamp, get_range_values
 from common.util import pickle_util as custom_pickle
-from common.util.common_util import s_print_err, s_print_warn, create_dir
+from common.util.common_util import s_print_err, s_print_warn, create_dir, extract
 
 gtfs_dump_file = data_week_directory + "gtfs_dump.dat"
 gtfs_mini_dump_file = data_week_directory + "gtfs_mini_dump.dat"
@@ -265,30 +265,15 @@ def merge_json_dump():
         This function merge all the JSON responses collected from
         Direction API into a single file.
     """
-    import zipfile
-    import shutil
-    import os
     full_json_responses = {}
-
-    _data_week_directory = data_week_directory
-    if agency_mode == "DATA_2019":
-        suffices_2019 = ["5_11", "11_17", "17_23"]
-        for suffix in suffices_2019:
-            _json_dump_file = data_week_directory + "json_dumps/json_dump_n_" + suffix + "_1.dat"
-            try:
-                json_responses = custom_pickle.load_obj(_json_dump_file)
-                full_json_responses.update(json_responses.copy())
-            except FileNotFoundError:
-                s_print_err(_json_dump_file + " is missing !!!")
-        for suffix in suffices_2019:
-            _json_dump_file = data_week_directory + "json_dumps/json_dump_n_" + suffix + "_2.dat"
-            try:
-                json_responses = custom_pickle.load_obj(_json_dump_file)
-                full_json_responses.update(json_responses.copy())
-            except FileNotFoundError:
-                s_print_err(_json_dump_file + " is missing !!!")
-
-    _json_dump_file = data_week_directory + "json_dump.dat"
+    _files = extract(f"{data_week_directory}/json_dumps/", ".dat")
+    for _file in _files:
+        try:
+            json_responses = custom_pickle.load_obj(_file)
+            full_json_responses.update(json_responses.copy())
+        except FileNotFoundError:
+            s_print_err(_file + " is missing !!!")
+    _json_dump_file = f"{data_week_directory}/json_dump.dat"
     custom_pickle.dump_obj(full_json_responses, _json_dump_file)
 
 
