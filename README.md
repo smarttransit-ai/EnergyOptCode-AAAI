@@ -45,6 +45,8 @@ This material is based upon work supported by the Department of Energy, Office o
 
 ```entry_no```, ```trip_id```, ```vehicle_id```, ```start_pdist```, ```end_pdist```, ```num_docs```, ```start_timestamp```, ```end_timestamp```, ```start_tmstmp```, ```end_tmstmp```, ```route_id```
 
+Supplementary data:
+https://drive.google.com/drive/folders/1124x5bqvewFKvzQoG6k8w33DIHgVfcU_?usp=sharing
 
 ### SAMPLE SOURCE CODES
 
