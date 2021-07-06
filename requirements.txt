@@ -8,8 +8,8 @@ folium==0.11.0
 geographiclib==1.50
 geopy==2.0.0
 idna==2.10
-Jinja2==2.11.2
-lxml==4.6.2
+Jinja2==2.11.3
+lxml==4.6.3
 MarkupSafe==1.1.1
 numpy==1.19.0
 pandas==1.0.5
@@ -22,4 +22,4 @@ requests==2.24.0
 Shapely==1.7.0
 six==1.15.0
 termcolor==1.1.0
-urllib3==1.25.9
+urllib3==1.26.5
